@@ -9,10 +9,12 @@
 
 // ╔══════════════════════════════════════════════════════════════════════════╗
 // ║  ONE PLACE — your API base URLs (no trailing slash)                      ║
-// ║  Active: local. Hosted test — uncomment Vercel and comment the local line. ║
+// ║  Default: hosted LynkWell API for team zips. For local Docker API, use  ║
+// ║  http://127.0.0.1:3847 and add that origin to extension/manifest.json.   ║
 // ╚══════════════════════════════════════════════════════════════════════════╝
-var REACHAI_MY_API_BASE_URL = 'http://127.0.0.1:3847';
-// var REACHAI_MY_API_BASE_URL = 'https://outreach-tool-nine-omega.vercel.app'; // if hosted API = Command Center, keep host in sync with lib/dp-bridge.js COMMAND_CENTER_ORIGIN
+var REACHAI_MY_API_BASE_URL = 'https://lynkwell-ai-extensions.vercel.app';
+// var REACHAI_MY_API_BASE_URL = 'http://127.0.0.1:3847';
+// Command Center (dp_config bridge) stays on outreach-tool-nine-omega unless you change manifest + dp-bridge.
 var REACHAI_MY_AI_API_BASE_URL = '';
 /** Must match one entry in server .env REACHAI_ACTIVATION_CODES (comma-separated). */
 var REACHAI_MY_ACTIVATION_CODE = 'LINKWELL-CHROME';

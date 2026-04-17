@@ -22,6 +22,7 @@
     "https://api.linkedin.com/*",
     "http://127.0.0.1:3847/*",
     "http://localhost:3847/*",
+    "https://lynkwell-ai-extensions.vercel.app/*",
     "https://outreach-tool-nine-omega.vercel.app/*"
   ],
   "side_panel": {
