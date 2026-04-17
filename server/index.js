@@ -102,10 +102,20 @@ if (LINKEDIN_CLIENT_ID && !LINKEDIN_CLIENT_SECRET) {
 
 const app = express();
 
+/** LinkedIn redirect_uri must match Developer Portal exactly — never send localhost from Vercel by mistake. */
+function getEffectivePublicBase() {
+  if (REACHAI_PUBLIC_URL) return REACHAI_PUBLIC_URL.replace(/\/$/, '');
+  const vu = String(process.env.VERCEL_URL || '')
+    .trim()
+    .replace(/\/$/, '');
+  if (vu) return `https://${vu}`;
+  return '';
+}
+
 function getExtensionFlowCallbackUrl() {
   const full = LINKEDIN_EXT_FLOW_REDIRECT_URI.replace(/\/$/, '');
   if (full) return full;
-  const base = REACHAI_PUBLIC_URL || `http://127.0.0.1:${PORT}`;
+  const base = getEffectivePublicBase() || `http://127.0.0.1:${PORT}`;
   return `${base.replace(/\/$/, '')}${LINKEDIN_EXT_CALLBACK_PATH}`;
 }
 
@@ -180,7 +190,9 @@ app.get('/api/v1/diagnose', (_req, res) => {
     jwt_secret_ok: JWT_SECRET.length >= 16,
     linkedin_oauth_ready: !!(LINKEDIN_CLIENT_ID && LINKEDIN_CLIENT_SECRET),
     gemini_model: MODEL_ID,
-    linkedin_extension_flow_callback_url: getExtensionFlowCallbackUrl()
+    linkedin_extension_flow_callback_url: getExtensionFlowCallbackUrl(),
+    reachai_public_url_configured: !!REACHAI_PUBLIC_URL,
+    vercel_url_fallback: !!(process.env.VERCEL && !REACHAI_PUBLIC_URL && process.env.VERCEL_URL)
   });
 });
 
