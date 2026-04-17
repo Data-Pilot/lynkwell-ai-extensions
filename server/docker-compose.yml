@@ -1,0 +1,24 @@
+# LynkWell API — Docker
+#
+# 1) cd server && cp .env.example .env
+# 2) Edit .env at minimum:
+#    - GEMINI_API_KEY (Google AI Studio, starts with AIza…)
+#    - JWT_SECRET (openssl rand -hex 32)
+#    - LINKEDIN_CLIENT_ID + LINKEDIN_CLIENT_SECRET (LinkedIn app → Auth → OpenID)
+#    - REACHAI_EXTENSION_SECRET (same string as extension/lib/reach-api-default.js REACHAI_EXTENSION_SECRET), OR
+#      REACHAI_ACTIVATION_CODES (e.g. LINKWELL-CHROME) matching REACHAI_DEFAULT_ACTIVATION_CODE in the extension
+# 3) docker compose up --build
+#
+# Chrome extension lives in ../extension/ — default API http://127.0.0.1:3847; add your host to extension/manifest.json host_permissions if not localhost.
+
+services:
+  reachai-api:
+    build: .
+    ports:
+      - "3847:3847"
+    env_file:
+      - .env
+    environment:
+      BIND_HOST: "0.0.0.0"
+      PORT: "3847"
+    restart: unless-stopped

@@ -1,0 +1,75 @@
+ 
+Phase 1: Onboarding & Calibration 
+The "Setup" phase ensures the tool knows who you are and what you want to achieve. 
+1. LinkedIn Authentication: 
+o User installs the extension and clicks "Sign in with LinkedIn." 
+o This verifies the account and pulls basic profile data (Name/Headline) to 
+save time. 
+2. Strategic Goal Setting: 
+o Global Context Input: A text area where the user defines their mission. 
+o Example: "I'm a Marketing Director at Data Pilot. I'm looking to connect 
+with B2B SaaS founders to discuss data automation and partnerships." 
+o Daily Outreach Goal: User sets a numeric target (e.g., 20 requests/day). 
+The UI provides a "Safety Zone" indicator to help avoid LinkedIn's spam 
+filters. 
+3. Default Preference Selection: 
+o User picks their "Signature Tone" (Casual, Professional, or Direct). 
+ 
+Phase 2: In-Situ Profile Intelligence 
+The tool works silently as the user browses LinkedIn profiles. 
+1. Passive Detection: 
+o As a profile loads, the extension identifies: 
+▪ Degree of Connection (1st, 2nd, or 3rd). 
+▪ "Open Profile" Status (Is a free InMail possible?). 
+▪ The "Stealth" Scrape: Grabs Name, Headline, visible About text, 
+and the top Experience entry. 
+2. The AI Strategic Badge: 
+o When the user opens the extension, the Recommendation Engine 
+displays: 
+▪ Recommended Channel: "AI Suggests: Connection Request" or 
+"AI Suggests: InMail." 
+▪ The "Bridge" Reasoning: "You both lead marketing teams in 
+Lahore—mentioning local market trends will increase your 
+acceptance rate." 
+ 
+Phase 3: Dynamic Drafting & Format Logic 
+The UI and AI adapt based on the selected communication channel. 
+1. Channel-Specific Interface: 
+o Connection Request: One compact text area. Hard-limit logic ensures 
+the AI stays under 300 characters. 
+o InMail: Two distinct fields: Subject Line (punchy/short) and Body (Macro-
+format with a value prop). 
+o Message: Conversational, medium-length format for 1st-degree contacts. 
+=============
+2. The "Bridge" Generation: 
+o The AI synthesizes the User's Global Context + Target's Data + 
+Selected Tone to write the note. 
+o Live Character Counter: Turns red if the text (AI-generated or user-
+edited) exceeds LinkedIn's limits. 
+ 
+Phase 4: Execution & Feedback Loop 
+Closing the loop and tracking progress. 
+1. One-Click Copy: 
+o Separate "Copy Subject" and "Copy Message" buttons for InMails. 
+o A "Copied!" success toast appears. 
+2. Guided Handoff: 
+o A small tooltip reminds the user: "Now click 'Add a note' on LinkedIn and 
+paste." 
+3. Progress Tracking (The "Dopamine Hit"): 
+o The Daily Goal Tracker updates instantly: 14 / 20 Goal Reached. 
+o A progress bar visually fills up. 
+o Success Notification: Once the goal is hit, a "Goal Achieved!" 
+celebration appears, encouraging the user to stop to stay within "safe" 
+LinkedIn activity limits. 
+ 
+📋 Summary of Format Constraints 
+Channel Length AI Goal 
+Connection 
+Request < 300 chars High-level "Hook" and request to connect. 
+InMail Up to 2,000 
+chars 
+Subject + Body: Value proposition and clear 
+CTA. 
+Message 400 - 800 chars Casual follow-up or specific inquiry for 1st-
+degree. 
+ 

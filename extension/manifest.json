@@ -1,0 +1,59 @@
+{
+  "manifest_version": 3,
+  "name": "LynkWell AI — Multi-channel outreach suite",
+  "version": "2.1.0",
+  "description": "LynkWell AI multi-channel outreach: Knowledge center + Gemini on your server — Connect notes, InMails, and DMs from live LinkedIn context.",
+  "permissions": [
+    "sidePanel",
+    "activeTab",
+    "storage",
+    "scripting",
+    "identity"
+  ],
+  "icons": {
+    "16": "icons/lynkwell-logo.png",
+    "32": "icons/lynkwell-logo.png",
+    "48": "icons/lynkwell-logo.png",
+    "128": "icons/lynkwell-logo.png"
+  },
+  "host_permissions": [
+    "https://www.linkedin.com/*",
+    "https://linkedin.com/*",
+    "https://api.linkedin.com/*",
+    "http://127.0.0.1:3847/*",
+    "http://localhost:3847/*",
+    "https://outreach-tool-nine-omega.vercel.app/*"
+  ],
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.linkedin.com/in/*",
+        "https://linkedin.com/in/*",
+        "https://www.linkedin.com/messaging/*",
+        "https://linkedin.com/messaging/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://outreach-tool-nine-omega.vercel.app/*"],
+      "js": ["web-bridge-content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_title": "LynkWell AI",
+    "default_icon": {
+      "16": "icons/lynkwell-logo.png",
+      "32": "icons/lynkwell-logo.png",
+      "48": "icons/lynkwell-logo.png",
+      "128": "icons/lynkwell-logo.png"
+    }
+  }
+}

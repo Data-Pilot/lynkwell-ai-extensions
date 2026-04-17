@@ -1,0 +1,21 @@
+{
+  "name": "reachai-api",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ReachAI hosted API — Gemini key stays on server; extension uses JWT after activation code.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js",
+    "vercel-build": "echo 'No build step — Express app runs on @vercel/node'"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0",
+    "jsonwebtoken": "^9.0.2"
+  }
+}

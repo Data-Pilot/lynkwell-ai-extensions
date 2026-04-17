@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>LynkWell AI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="sidepanel.css">
+</head>
+<body class="lw-body">
+
+  <header class="lw-header">
+    <div class="lw-header__row">
+      <div class="lw-brand">
+        <span class="lw-brand__mark" aria-hidden="true">
+          <img src="icons/lynkwell-logo.png" alt="" class="lw-brand__logo" width="28" height="28" decoding="async" />
+        </span>
+        <span class="lw-brand__name">LynkWell AI</span>
+      </div>
+      <div class="lw-header__meta">
+        <span id="header-api-status" class="lw-status lw-status--off" title="API session"><span class="lw-status__dot"></span><span class="lw-status__text">Not connected</span></span>
+        <span class="lw-version">v2.1</span>
+        <button type="button" id="btn-log-out" class="lw-header__logout hidden" title="Log out of this extension">Log out</button>
+      </div>
+    </div>
+    <div id="lw-step-dots" class="lw-step-dots" aria-hidden="true">
+      <span class="lw-dot lw-dot--1 active"></span>
+      <span class="lw-dot lw-dot--2"></span>
+    </div>
+  </header>
+
+  <!-- LinkedIn connect (UI matches product mockup; wire OAuth when your API is ready) -->
+  <div id="screen-linkedin" class="screen lw-screen lw-screen--linkedin hidden">
+    <div class="lw-li-card" role="region" aria-labelledby="lw-li-heading">
+      <header class="lw-li-card__header">
+        <div class="lw-li-card__brand">
+          <span class="lw-li-card__mark" aria-hidden="true">
+            <img src="icons/lynkwell-logo.png" alt="" class="lw-brand__logo lw-brand__logo--sm" width="24" height="24" decoding="async" />
+          </span>
+          <span class="lw-li-card__brand-name">LynkWell AI</span>
+        </div>
+        <span class="lw-li-card__version">v2.1</span>
+      </header>
+      <div class="lw-li-card__rule" aria-hidden="true"></div>
+      <div class="lw-li-card__body">
+        <div class="lw-li-icon" aria-hidden="true">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 20.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+        </div>
+        <h1 id="lw-li-heading" class="lw-li-title">Connect LinkedIn</h1>
+        <p id="lw-li-lead" class="lw-li-lead">Sign in to enable AI-powered outreach directly from LinkedIn profiles.</p>
+        <div id="lw-li-api-banner" class="lw-li-api-banner hidden" role="status">
+          <p class="lw-li-api-banner__text"></p>
+          <button type="button" id="btn-li-open-setup" class="lw-btn lw-btn--outline lw-btn--sm lw-li-api-banner__btn">Connection help</button>
+        </div>
+        <!-- Developer-only: shown only when REACHAI_SHOW_LINKEDIN_REDIRECT_HELPER is true, or classic in-extension OAuth (no API callback). -->
+        <div class="lw-li-redirect-box hidden" id="lw-li-redirect-box">
+          <p class="lw-small lw-text-muted lw-li-redirect-box__lead">
+            In <a href="https://www.linkedin.com/developers/apps" target="_blank" rel="noopener noreferrer">LinkedIn Developers</a> → your app → <strong>Auth</strong> → <strong>Authorized redirect URLs</strong>, add this URL <strong>exactly</strong>. <span class="lw-li-redirect-devnote">Local dev uses <code class="lw-code">127.0.0.1</code> or <code class="lw-code">localhost</code>; production should use your real <code class="lw-code">https://api…</code> origin in <code class="lw-code">REACHAI_PUBLIC_URL</code> — same value you register on LinkedIn.</span>
+          </p>
+          <p id="lw-li-redirect-sub" class="lw-small lw-text-muted lw-li-redirect-sub"></p>
+          <div class="lw-li-redirect-row lw-li-redirect-row--stack">
+            <textarea readonly class="lw-li-redirect-input lw-li-redirect-input--multiline" id="input-li-redirect-url" spellcheck="false" rows="2" aria-label="OAuth redirect URL for LinkedIn"></textarea>
+            <button type="button" class="lw-btn lw-btn--outline lw-btn--sm" id="btn-copy-li-redirect">Copy</button>
+          </div>
+          <p class="lw-small lw-text-muted lw-li-redirect-foot">Unpacked extensions use a fixed ID until you remove them; if you re-load from another path, the ID can change — add the new URL in LinkedIn again.</p>
+        </div>
+        <button type="button" id="btn-linkedin-connect" class="lw-btn lw-btn--linkedin lw-btn--linkedin-hero js-linkedin-connect">
+          <svg class="lw-btn--linkedin__glyph" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 20.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+          <span>Sign in with LinkedIn</span>
+        </button>
+        <p class="lw-li-disclaimer">We only request read access to help personalize your outreach.</p>
+        <button type="button" id="btn-linkedin-skip" class="lw-li-skip">Continue without LinkedIn</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- API / model unreachable (no Knowledge center flow until session is valid) -->
+  <div id="screen-api-unavailable" class="screen lw-screen hidden">
+    <div class="lw-api-down-card lw-card">
+      <h2 class="lw-h2">Backend or AI unavailable</h2>
+      <p class="lw-small lw-text-muted">
+        LynkWell uses <strong>your</strong> API for auth and your server’s <strong>Gemini</strong> (or configured model). This device could not get a valid session — fix the server, <code class="lw-code">.env</code>, or network, then retry.
+      </p>
+      <pre id="api-unavailable-detail" class="lw-api-down-detail" aria-live="polite"></pre>
+      <button type="button" id="btn-api-retry" class="lw-btn lw-btn--primary lw-btn--wide lw-mt-4">Retry connection</button>
+    </div>
+  </div>
+
+  <!-- Knowledge center (setup): post–LinkedIn compact flow + full API-first form -->
+  <div id="screen-setup" class="screen lw-screen hidden">
+    <div class="lw-setup-head">
+      <h2 class="lw-h2">Knowledge center</h2>
+      <span id="setup-sync-badge" class="lw-pill lw-pill--muted hidden">Synced</span>
+    </div>
+    <p id="lw-setup-intro-default" class="lw-muted lw-setup-sub lw-setup-sub--short">Tell us who you are and how you want to sound. AI runs on your server (Gemini).</p>
+    <p id="lw-setup-intro-post-li" class="lw-setup-post-intro lw-muted hidden">You're connected. Refine how LynkWell AI speaks for you on LinkedIn.</p>
+
+    <div id="lw-setup-pre-fields" class="lw-setup-pre-fields">
+      <div class="lw-field-row">
+        <div>
+          <label>Your name</label>
+          <input type="text" id="input-name" placeholder="Alex Chen" autocomplete="name">
+        </div>
+        <div>
+          <label>Your role</label>
+          <input type="text" id="input-role" placeholder="VP of Sales" autocomplete="organization-title">
+        </div>
+      </div>
+    </div>
+
+    <div class="lw-context-wrap">
+      <div class="lw-context-head">
+        <label for="input-mission" class="lw-label-mock">Your context</label>
+        <button type="button" id="btn-enhance-mission" class="lw-btn lw-btn--ghost lw-btn--sm lw-enhance-chip">
+          <svg class="lw-sparkle" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l1.2 4.2L18 8l-4.8 1.8L12 14l-1.2-4.2L6 8l4.8-1.8L12 2zm0 10l.8 2.8L16 16l-3.2 1.2L12 20l-.8-2.8L8 16l3.2-1.2L12 12z"/></svg>
+          Enhance
+        </button>
+      </div>
+      <textarea id="input-mission" rows="6" placeholder="Describe your company, who you help, and how you want to sound on LinkedIn…"></textarea>
+    </div>
+
+    <p class="lw-label-upper">Tone</p>
+    <div id="tone-tiles-setup" class="lw-tone-grid" role="group" aria-label="Default tone">
+      <button type="button" class="lw-tone-tile active" data-tone="professional">
+        <span class="lw-tone-tile__icon" aria-hidden="true">💼</span>
+        <span class="lw-tone-tile__label">Professional</span>
+      </button>
+      <button type="button" class="lw-tone-tile" data-tone="casual">
+        <span class="lw-tone-tile__icon" aria-hidden="true">☕</span>
+        <span class="lw-tone-tile__label">Casual</span>
+      </button>
+      <button type="button" class="lw-tone-tile" data-tone="direct">
+        <span class="lw-tone-tile__icon" aria-hidden="true">⚡</span>
+        <span class="lw-tone-tile__label">Direct</span>
+      </button>
+    </div>
+    <select id="input-tone" class="hidden" aria-hidden="true" tabindex="-1">
+      <option value="professional">professional</option>
+      <option value="casual">casual</option>
+      <option value="direct">direct</option>
+    </select>
+
+    <div id="lw-setup-goal-api" class="lw-setup-goal-api">
+      <label>Daily outreach goal</label>
+      <input type="number" id="input-goal" value="20" min="1" max="30">
+      <p class="lw-small lw-text-muted" id="safety-zone-indicator"></p>
+
+      <details class="lw-details">
+        <summary>Auth API base URL &amp; server (required)</summary>
+        <div id="cloud-setup-fields" class="lw-details__body">
+          <label for="input-cloud-base">Auth API base URL</label>
+          <input type="text" id="input-cloud-base" autocomplete="off" placeholder="https://auth.yourcompany.com or http://127.0.0.1:3847">
+          <label for="input-ai-base" class="lw-mt-label">Gemini / AI API base URL</label>
+          <input type="text" id="input-ai-base" autocomplete="off" placeholder="Leave blank if same as auth — or https://ai.yourcompany.com">
+          <p class="lw-api-dev-hint lw-small lw-text-muted">
+            <strong>Auth</strong> host: activation JWT and LinkedIn token exchange
+            (<code class="lw-code">POST …/api/v1/auth/activate</code>,
+            <code class="lw-code">POST …/api/v1/oauth/linkedin/token</code>).
+            <strong>AI / Gemini</strong> host: drafts and setup summaries
+            (<code class="lw-code">POST …/api/v1/ai/complete</code>).
+            Leave the second field empty to use one server for both.
+            Put <code class="lw-code">GEMINI_API_KEY</code> only on the AI server’s <code class="lw-code">.env</code>.
+            Add <strong>every</strong> host you use to <code class="lw-code">extension/manifest.json</code> <code class="lw-code">host_permissions</code>.
+            Default API URL: edit <code class="lw-code">REACHAI_MY_API_BASE_URL</code> in <code class="lw-code">lib/reach-api-default.js</code>; prod: <code class="lw-code">REACHAI_BUILD_PROFILE</code> + <code class="lw-code">REACHAI_PRODUCTION_*</code> (see HACKATHON.md).
+          </p>
+          <div id="activation-code-wrap">
+            <label for="input-activation-code">Activation code</label>
+            <input type="text" id="input-activation-code" autocomplete="off" placeholder="If your server uses activation codes">
+          </div>
+          <p class="lw-small lw-text-muted">Non-localhost: add this host to <code class="lw-code">host_permissions</code> in <code class="lw-code">manifest.json</code>.</p>
+        </div>
+      </details>
+    </div>
+
+    <p class="lw-label-upper lw-label-ref">Reference document <span class="lw-optional">(optional)</span></p>
+    <div class="lw-card lw-upload lw-upload--setup" id="upload-zone-setup">
+      <span class="lw-upload__ico" aria-hidden="true">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      </span>
+      <div class="lw-upload__stack">
+        <p class="lw-upload__title" id="upload-zone-status-setup">Upload PDF or Doc</p>
+        <p class="lw-upload__subtitle lw-small lw-text-muted">Pitch deck, one-pager, etc.</p>
+        <p class="lw-upload__formats lw-small lw-text-muted">.txt .pdf .csv .docx — max 5MB</p>
+      </div>
+      <input type="file" id="file-input-setup" accept=".txt,.csv,.pdf,.docx,.md,.json" multiple hidden>
+    </div>
+    <ul id="file-list-setup" class="lw-file-list"></ul>
+
+    <button type="button" id="btn-save-setup" class="lw-btn lw-btn--primary lw-btn--wide">
+      <span id="btn-save-setup-label">Continue to Outreach →</span>
+    </button>
+    <button type="button" id="btn-signout-linkedin-setup" class="lw-setup-li-signout hidden">Sign out of LinkedIn</button>
+  </div>
+
+  <!-- Verify -->
+  <div id="screen-confirm" class="screen lw-screen hidden">
+    <h2 class="lw-h2">Almost there</h2>
+    <p class="lw-muted">Gemini summarized your professional voice. Confirm to start.</p>
+    <div class="lw-ai-preview">
+      <p class="lw-ai-preview__label">AI summary</p>
+      <p id="confirm-ai-msg" class="lw-ai-preview__text">Analyzing…</p>
+    </div>
+    <p class="lw-small lw-text-muted">Signed in as <strong id="confirm-name-display"></strong></p>
+    <button type="button" id="btn-confirm-yes" class="lw-btn lw-btn--primary lw-btn--wide">Looks good</button>
+    <button type="button" id="btn-confirm-edit" class="lw-btn lw-btn--outline lw-btn--wide">Edit knowledge center</button>
+  </div>
+
+  <!-- Knowledge center (Edit settings) — same layout as setup (context, tone, reference upload) -->
+  <div id="screen-training" class="screen lw-screen lw-screen--kb lw-training--quick hidden">
+    <header class="lw-kb-toolbar">
+      <button type="button" id="btn-back-training" class="lw-kb-back-btn">
+        <span class="lw-kb-back-btn__ico" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        </span>
+        <span class="lw-kb-back-btn__text">Outreach</span>
+      </button>
+    </header>
+    <div class="lw-setup-head">
+      <h2 class="lw-h2">Knowledge center</h2>
+      <span id="kb-sync-badge" class="lw-pill lw-pill--muted hidden">Synced</span>
+    </div>
+    <p class="lw-muted lw-setup-sub lw-kb-identify-lead">Define your AI identity.</p>
+
+    <div class="lw-context-wrap">
+      <div class="lw-context-head">
+        <label for="input-mission-training" class="lw-label-mock">Knowledge center</label>
+        <button type="button" id="btn-enhance-mission-training" class="lw-btn lw-btn--ghost lw-btn--sm lw-enhance-chip">
+          <svg class="lw-sparkle" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l1.2 4.2L18 8l-4.8 1.8L12 14l-1.2-4.2L6 8l4.8-1.8L12 2zm0 10l.8 2.8L16 16l-3.2 1.2L12 20l-.8-2.8L8 16l3.2-1.2L12 12z"/></svg>
+          Enhance
+        </button>
+      </div>
+      <textarea id="input-mission-training" rows="6" placeholder="Describe your company, who you help, and how you want to sound on LinkedIn…"></textarea>
+    </div>
+
+    <p class="lw-label-upper">Tone</p>
+    <div id="tone-tiles-training" class="lw-tone-grid" role="group" aria-label="Default tone">
+      <button type="button" class="lw-tone-tile active" data-tone="professional">
+        <span class="lw-tone-tile__icon" aria-hidden="true">💼</span>
+        <span class="lw-tone-tile__label">Professional</span>
+      </button>
+      <button type="button" class="lw-tone-tile" data-tone="casual">
+        <span class="lw-tone-tile__icon" aria-hidden="true">☕</span>
+        <span class="lw-tone-tile__label">Casual</span>
+      </button>
+      <button type="button" class="lw-tone-tile" data-tone="direct">
+        <span class="lw-tone-tile__icon" aria-hidden="true">⚡</span>
+        <span class="lw-tone-tile__label">Direct</span>
+      </button>
+    </div>
+    <select id="input-tone-training" class="hidden" aria-hidden="true" tabindex="-1">
+      <option value="professional">professional</option>
+      <option value="casual">casual</option>
+      <option value="direct">direct</option>
+    </select>
+
+    <div class="lw-daily-limit lw-card lw-mt-4">
+      <h3 class="lw-daily-limit__title">Daily Safety Limits</h3>
+      <p class="lw-small lw-text-muted lw-daily-limit__sub">Configure your LinkedIn outreach boundaries.</p>
+      <div class="lw-daily-limit__row">
+        <span class="lw-daily-limit__label">LinkedIn outreach limit</span>
+        <span id="kb-daily-limit-badge" class="lw-daily-limit__badge" aria-live="polite"></span>
+      </div>
+      <p id="kb-daily-limit-web-hint" class="lw-small lw-text-muted lw-daily-limit__hint hidden">
+        Limit is managed from your <a data-command-center-link href="#" target="_blank" rel="noopener noreferrer">Command Center</a> — open that tab to sync changes.
+      </p>
+      <input type="range" id="kb-daily-limit-slider" class="lw-daily-limit__slider" min="1" max="30" value="20" step="1" aria-valuemin="1" aria-valuemax="30" />
+      <div class="lw-daily-limit__riskbar" aria-hidden="true">
+        <span class="lw-daily-limit__risk lw-daily-limit__risk--safe"></span>
+        <span class="lw-daily-limit__risk lw-daily-limit__risk--mod"></span>
+        <span class="lw-daily-limit__risk lw-daily-limit__risk--high"></span>
+      </div>
+      <div class="lw-daily-limit__legend lw-small">
+        <span id="kb-daily-legend-safe" class="lw-daily-limit__leg lw-daily-limit__leg--safe">Safe</span>
+        <span id="kb-daily-legend-mod" class="lw-daily-limit__leg lw-daily-limit__leg--mod">Moderate</span>
+        <span id="kb-daily-legend-high" class="lw-daily-limit__leg lw-daily-limit__leg--high">High risk</span>
+      </div>
+      <p id="kb-daily-limit-rec-line" class="lw-small lw-text-muted lw-daily-limit__rec"></p>
+      <div class="lw-daily-limit__actions">
+        <button type="button" id="kb-daily-limit-reset" class="lw-btn lw-btn--ghost lw-btn--sm">Reset to recommended</button>
+      </div>
+    </div>
+
+    <p id="label-kb-ref" class="lw-label-upper lw-label-ref">Reference document <span class="lw-optional">(optional)</span></p>
+    <div class="lw-card lw-upload lw-upload--setup" id="upload-zone" role="button" tabindex="0" aria-labelledby="label-kb-ref upload-zone-status">
+      <span class="lw-upload__ico" aria-hidden="true">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      </span>
+      <div class="lw-upload__stack">
+        <p class="lw-upload__title" id="upload-zone-status">Upload PDF or Doc</p>
+        <p class="lw-upload__subtitle lw-small lw-text-muted">Pitch deck, one-pager, etc.</p>
+        <p class="lw-upload__formats lw-small lw-text-muted">.txt .pdf .csv .docx — max 5MB</p>
+      </div>
+      <input type="file" id="file-input" accept=".txt,.csv,.pdf,.docx,.md,.json" multiple hidden>
+    </div>
+    <ul id="file-list" class="lw-file-list"></ul>
+
+    <span id="mission-saved-msg" class="lw-save-pill hidden" aria-hidden="true"></span>
+
+    <button type="button" id="btn-clear-feedback" class="lw-btn lw-btn--danger-outline lw-mt-4">Clear AI feedback history</button>
+    <button type="button" id="btn-disconnect-cloud" class="lw-btn lw-btn--outline lw-mt-2 hidden">Disconnect API</button>
+  </div>
+
+  <!-- Main outreach -->
+  <div id="screen-generator" class="screen lw-screen hidden">
+    <div class="lw-profile-card">
+      <div class="lw-avatar-wrap">
+        <img id="target-avatar-img" class="lw-avatar-img hidden" alt="" width="52" height="52" decoding="async" />
+        <div id="target-avatar" class="lw-avatar lw-avatar--fallback" aria-hidden="true">?</div>
+      </div>
+      <div class="lw-profile-card__main">
+        <div class="lw-profile-name-row">
+          <h3 id="target-name" class="lw-profile-name">Loading…</h3>
+          <span id="target-degree-badge" class="lw-degree-badge hidden">2nd</span>
+          <button type="button" id="btn-refresh-profile" class="lw-refresh-tab-btn" title="Sync from open LinkedIn tab" aria-label="Sync profile from open LinkedIn tab">
+            <span class="lw-refresh-tab-btn__ico" aria-hidden="true">↻</span>
+          </button>
+        </div>
+        <p id="target-headline" class="lw-profile-headline ellipsis"></p>
+        <div class="lw-profile-meta lw-profile-meta--inline" role="group" aria-label="Company and location">
+          <span class="lw-meta-item">
+            <span class="lw-meta-ico" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V7l8-4v18M19 21V11l-6-4"/><path d="M9 9v0M9 12v0M9 15v0M9 18v0"/></svg></span>
+            <span id="target-company">—</span>
+          </span>
+          <span class="lw-meta-item">
+            <span class="lw-meta-ico" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span>
+            <span id="target-location">—</span>
+          </span>
+        </div>
+        <p id="target-mutuals" class="lw-mutuals lw-small lw-text-muted hidden" aria-live="polite">
+          <span id="target-mutuals-n" class="lw-mutuals__n"></span> mutual connections
+        </p>
+      </div>
+    </div>
+
+    <div id="lw-sent-log-banner" class="lw-sent-log-banner hidden" role="status" aria-live="polite"></div>
+
+    <div class="lw-channel-block">
+      <div class="lw-channel-head">
+        <span class="lw-label-upper lw-label-upper--inline lw-channel-head__title">Channel</span>
+        <span id="recco-badge" class="lw-ai-chip hidden">
+          <svg class="lw-ai-chip__spark" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l1.2 4.2L18 8l-4.8 1.8L12 14l-1.2-4.2L6 8l4.8-1.8L12 2zm0 10l.8 2.8L16 16l-3.2 1.2L12 20l-.8-2.8L8 16l3.2-1.2L12 12z"/></svg>
+          AI Recommended
+        </span>
+      </div>
+      <div id="recco-loading" class="lw-recco-loading hidden" role="status" aria-live="polite">
+        <span class="lw-spinner lw-recco-loading__spinner" aria-hidden="true"></span>
+        <span id="recco-loading-text" class="lw-recco-loading__text">Analyzing profile for the best channel…</span>
+      </div>
+      <span id="recco-channel" class="hidden"></span>
+      <p id="recco-agent-pick" class="lw-recco-agent lw-small hidden" aria-live="polite"></p>
+      <p id="recco-reason" class="lw-recco-reason lw-small lw-text-muted hidden"></p>
+      <div id="recco-deep" class="lw-recco-deep hidden" aria-live="polite">
+        <p class="lw-label-upper lw-recco-deep__title">Why this pick</p>
+        <p id="recco-analysis" class="lw-small lw-recco-analysis"></p>
+        <p id="recco-tone-line" class="lw-small lw-recco-tone lw-mt-2 hidden"></p>
+        <ul id="recco-plans" class="lw-recco-plans lw-small lw-text-muted lw-mt-2 hidden"></ul>
+      </div>
+      <div id="channel-tabs" class="lw-channel-grid" role="tablist" aria-label="Outreach channel">
+        <button type="button" class="lw-channel-tile" data-val="inmail" role="tab">
+          <span class="lw-channel-tile__best hidden">Best</span>
+          <span class="lw-channel-tile__icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 6l-10 7L2 6"/></svg></span>
+          <span class="lw-channel-tile__name">InMail</span>
+          <span class="lw-channel-tile__match" data-channel-match="inmail">—</span>
+        </button>
+        <button type="button" class="lw-channel-tile active" data-val="connection" role="tab">
+          <span class="lw-channel-tile__best hidden">Best</span>
+          <span class="lw-channel-tile__icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6M23 11h-6"/></svg></span>
+          <span class="lw-channel-tile__name">Connect</span>
+          <span class="lw-channel-tile__match" data-channel-match="connection">—</span>
+        </button>
+        <button type="button" class="lw-channel-tile" data-val="message" role="tab">
+          <span class="lw-channel-tile__best hidden">Best</span>
+          <span class="lw-channel-tile__icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+          <span class="lw-channel-tile__name">DM</span>
+          <span class="lw-channel-tile__match" data-channel-match="message">—</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="lw-generator-controls">
+      <p class="lw-label-upper lw-mt">Tone</p>
+      <div id="tone-pills" class="lw-tone-inline" role="group" aria-label="Message tone">
+        <button type="button" class="lw-tone-inline__btn active" data-val="professional" aria-label="Professional tone">
+          <span class="lw-tone-inline__emoji" aria-hidden="true">💼</span>
+          <span class="lw-tone-inline__text">Professional</span>
+        </button>
+        <button type="button" class="lw-tone-inline__btn" data-val="casual" aria-label="Casual tone">
+          <span class="lw-tone-inline__emoji" aria-hidden="true">☕</span>
+          <span class="lw-tone-inline__text">Casual</span>
+        </button>
+        <button type="button" class="lw-tone-inline__btn" data-val="direct" aria-label="Direct tone">
+          <span class="lw-tone-inline__emoji" aria-hidden="true">⚡</span>
+          <span class="lw-tone-inline__text">Direct</span>
+        </button>
+      </div>
+
+      <button type="button" id="btn-generate" class="lw-btn lw-btn--outline lw-btn--wide lw-mt">
+        <span class="lw-btn__text">Generate with Gemini</span>
+        <span class="lw-spinner hidden" aria-hidden="true"></span>
+      </button>
+    </div>
+
+    <p id="generate-live-status" class="lw-generate-live-status lw-small hidden" role="status" aria-live="polite"></p>
+
+    <div id="editor-container" class="lw-ai-block hidden">
+      <div class="lw-ai-block__head">
+        <span class="lw-label-upper lw-label-upper--inline">AI MESSAGE</span>
+        <span id="generator-tone-badge" class="lw-pill lw-pill--coral">Professional</span>
+      </div>
+      <p id="kb-context-hint" class="lw-ai-block__kb-hint lw-small lw-text-muted" role="status"></p>
+      <textarea id="subject-editor" class="hidden lw-subject-input" rows="1" placeholder="Subject"></textarea>
+      <textarea id="draft-editor" class="lw-draft-area" rows="6" placeholder="Your draft will appear here…"></textarea>
+      <div class="lw-editor-foot">
+        <div class="lw-feedback">
+          <span class="lw-small lw-text-muted">Helpful?</span>
+          <button type="button" id="btn-feedback-yes" class="lw-icon-btn" aria-label="Yes">👍</button>
+          <button type="button" id="btn-feedback-no" class="lw-icon-btn" aria-label="No">👎</button>
+        </div>
+        <div class="lw-char-counter"><span id="char-count">0</span><span id="char-limit">/300</span></div>
+      </div>
+      <div class="lw-action-row" id="action-row-default">
+        <button type="button" id="btn-copy" class="lw-btn lw-btn--primary lw-btn--copy">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          Copy Message
+        </button>
+        <button type="button" id="btn-regenerate" class="lw-btn lw-btn--outline lw-btn--retry">Retry</button>
+      </div>
+      <div class="lw-action-row lw-action-row--triple hidden" id="action-row-inmail">
+        <button type="button" id="btn-copy-subject" class="lw-btn lw-btn--primary lw-btn--grow">Subject</button>
+        <button type="button" id="btn-copy-body" class="lw-btn lw-btn--primary lw-btn--grow">Body</button>
+        <button type="button" id="btn-regenerate-inmail" class="lw-btn lw-btn--outline lw-btn--grow">Retry</button>
+      </div>
+      <p id="handoff-tooltip" class="lw-small lw-text-center lw-text-muted hidden lw-mt">Paste into LinkedIn when ready.</p>
+    </div>
+
+    <div class="lw-progress-card lw-mt">
+      <div class="lw-flex-between lw-progress-head">
+        <span class="lw-progress-title">Daily Progress</span>
+        <span class="lw-progress-count"><span id="session-count">0</span> / <span id="session-limit">20</span></span>
+      </div>
+      <div class="lw-progress-bar"><div class="lw-progress-fill" id="session-progress"></div></div>
+      <div class="lw-progress-foot lw-small lw-text-muted">
+        <span>Today’s messages</span>
+        <span class="lw-progress-foot__right">
+          <span id="session-remaining">—</span>
+          <button type="button" id="btn-reset-daily-usage" class="lw-progress-reset" title="Set today’s count back to 0">Reset</button>
+        </span>
+      </div>
+      <div id="goal-achieved-banner" class="hidden lw-banner-ok">Goal reached for today.</div>
+    </div>
+
+    <button type="button" id="btn-edit-settings-footer" class="lw-link lw-link--center lw-mt">Edit Settings &gt;</button>
+  </div>
+
+  <div id="toast" class="lw-toast hidden">Copied</div>
+
+  <script src="lib/dp-bridge.js"></script>
+  <script src="lib/storage-manager.js"></script>
+  <script src="lib/reach-api-default.js"></script>
+  <script src="lib/channel-limits.js"></script>
+  <script src="lib/file-parser.js"></script>
+  <script src="sidepanel.js"></script>
+</body>
+</html>
