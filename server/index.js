@@ -36,7 +36,8 @@ const LINKEDIN_EXT_CALLBACK_PATH = '/api/v1/oauth/linkedin/extension-flow/callba
 const MODEL_ID = process.env.GEMINI_MODEL_ID || 'gemini-2.5-flash';
 const MAX_TOKENS = {
   confirm: 256,
-  recommend: 1536,
+  /** Large KB + profile prompts need headroom; truncation breaks JSON.parse in the extension. */
+  recommend: 4096,
   generate: 2048,
   /** InMail drafts: JSON { subject, body } — same cap as generate */
   generate_structured: 2048,
@@ -54,7 +55,7 @@ function buildGeminiGenerationConfig(usage) {
   }
   if (usage === 'recommend') {
     return {
-      temperature: 0.45,
+      temperature: 0.35,
       maxOutputTokens,
       responseMimeType: 'application/json'
     };

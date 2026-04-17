@@ -556,20 +556,70 @@ function stripMarkdownCodeFences(s) {
   return t;
 }
 
+/**
+ * First top-level `{ ... }` using brace depth + double-quoted strings only (JSON).
+ * Avoids `lastIndexOf('}')` matching a `}` inside a string value (common in profile snippets).
+ */
+function extractFirstBalancedJsonObject(s) {
+  const str = String(s || '');
+  const start = str.indexOf('{');
+  if (start < 0) return null;
+  let depth = 0;
+  let inStr = false;
+  let esc = false;
+  for (let i = start; i < str.length; i++) {
+    const c = str[i];
+    if (esc) {
+      esc = false;
+      continue;
+    }
+    if (inStr) {
+      if (c === '\\') {
+        esc = true;
+        continue;
+      }
+      if (c === '"') inStr = false;
+      continue;
+    }
+    if (c === '"') {
+      inStr = true;
+      continue;
+    }
+    if (c === '{') depth++;
+    else if (c === '}') {
+      depth--;
+      if (depth === 0) return str.slice(start, i + 1);
+    }
+  }
+  return null;
+}
+
 function parseJsonObjectFromModelText(raw) {
   if (raw == null) throw new Error('empty');
   let s = stripMarkdownCodeFences(raw);
-  const tryParse = (chunk) => JSON.parse(chunk);
-  try {
-    return tryParse(s);
-  } catch {
-    const i = s.indexOf('{');
-    const j = s.lastIndexOf('}');
-    if (i >= 0 && j > i) {
-      return tryParse(s.slice(i, j + 1));
+  s = s.replace(/^\uFEFF/, '').trim();
+  const tryParse = (chunk) => JSON.parse(String(chunk).trim());
+
+  const candidates = [];
+  const add = (x) => {
+    const t = x != null ? String(x).trim() : '';
+    if (t && !candidates.includes(t)) candidates.push(t);
+  };
+  add(s);
+  add(extractFirstBalancedJsonObject(s));
+  const i = s.indexOf('{');
+  const j = s.lastIndexOf('}');
+  if (i >= 0 && j > i) add(s.slice(i, j + 1));
+
+  for (const chunk of candidates) {
+    if (!chunk) continue;
+    try {
+      return tryParse(chunk);
+    } catch {
+      /* try next candidate */
     }
-    throw new Error('no json object');
   }
+  throw new Error('no json object');
 }
 
 /** InMail / mistaken JSON output: subject + body. Returns null if not parseable. */
