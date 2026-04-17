@@ -39,6 +39,21 @@ npx vercel --prod
 
 Set **`REACHAI_PUBLIC_URL`** in the Vercel project settings to your production hostname.
 
+## Option C — GitHub Actions (deploy without sharing tokens in chat)
+
+We **cannot** deploy to your Vercel account from here (no access to your login or tokens). You can still get **one-click deploys from GitHub** by adding secrets only inside **GitHub** (never paste `VERCEL_TOKEN` into AI chats or issues).
+
+1. **Create a Vercel project** for this API (dashboard import with Root Directory **`server`**, or `cd server && npx vercel link`).
+2. In Vercel: **Project → Settings → Environment Variables** — add the same variables as Option A.
+3. Create a token: [vercel.com/account/tokens](https://vercel.com/account/tokens).
+4. In GitHub: **Repo → Settings → Secrets and variables → Actions → New repository secret**:
+   - `VERCEL_TOKEN` — the token from step 3  
+   - `VERCEL_ORG_ID` — **Team / Personal account** settings in Vercel, or from `server/.vercel/project.json` after `vercel link`  
+   - `VERCEL_PROJECT_ID` — **Project → Settings → General → Project ID**
+5. Push to `main` (or open **Actions → Deploy API to Vercel → Run workflow**).
+
+The workflow file is **`.github/workflows/deploy-vercel-api.yml`**.
+
 ## Extension / clients
 
 Point **`REACHAI_MY_API_BASE_URL`** (or production equivalent in `extension/lib/reach-api-default.js`) to `https://<your-deployment>.vercel.app` with no trailing slash.

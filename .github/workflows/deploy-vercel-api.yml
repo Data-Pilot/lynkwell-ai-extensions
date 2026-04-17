@@ -1,0 +1,33 @@
+# Deploy the Express API in /server to Vercel (no tokens in repo — use GitHub Secrets only).
+#
+# Required repo secrets (GitHub → Settings → Secrets and variables → Actions):
+#   VERCEL_TOKEN        — https://vercel.com/account/tokens
+#   VERCEL_ORG_ID       — Vercel → Team/User settings → copy ID, or from `server/.vercel/project.json` after `vercel link`
+#   VERCEL_PROJECT_ID   — Project → Settings → General → Project ID
+#
+# Create the Vercel project once (dashboard or `cd server && npx vercel link`), add env vars in Vercel, then add the three secrets here and run this workflow.
+
+name: Deploy API to Vercel
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'server/**'
+      - '.github/workflows/deploy-vercel-api.yml'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to Vercel (production)
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          working-directory: server
+          vercel-args: '--prod'
