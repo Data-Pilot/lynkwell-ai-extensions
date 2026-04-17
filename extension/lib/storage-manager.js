@@ -2,6 +2,14 @@
 // Manages all chrome.storage.local operations for identity, context, feedback, and sessions
 
 const StorageManager = {
+  /** Single source for KB → prompt limits (UI + getFullContext + upload validation). */
+  KNOWLEDGE_AI_LIMITS: Object.freeze({
+    MAX_FILE_UPLOAD_BYTES: 5 * 1024 * 1024,
+    MAX_FILE_EXCERPT_CHARS: 10000,
+    MAX_MISSION_CHARS: 8000,
+    MAX_NOTES_CHARS: 8000,
+    MAX_WEB_BRIDGE_CONTEXT_CHARS: 8000
+  }),
 
   // ═══════════════════════════════════════
   //  IDENTITY
@@ -234,8 +242,11 @@ const StorageManager = {
    * @param {{ name?: string, role?: string }} [identity] — included so drafts stay in-voice even if mission is empty.
    */
   async getFullContext(identity) {
-    const MAX_FILE_CHARS = 10000;
-    const MAX_TEXT_CHARS = 8000;
+    const L = this.KNOWLEDGE_AI_LIMITS;
+    const MAX_FILE_CHARS = L.MAX_FILE_EXCERPT_CHARS;
+    const MAX_TEXT_CHARS = L.MAX_MISSION_CHARS;
+    const MAX_NOTES = L.MAX_NOTES_CHARS;
+    const MAX_WEB = L.MAX_WEB_BRIDGE_CONTEXT_CHARS;
     const settings = await this.getSettings();
     const ctx = await this.getTrainingContext();
     let fullText = '';
@@ -258,13 +269,13 @@ const StorageManager = {
     }
 
     if (ctx.text && ctx.text.trim()) {
-      fullText += `--- ADDITIONAL NOTES (product, ICP, proof points) ---\n${String(ctx.text).trim().slice(0, MAX_TEXT_CHARS)}\n`;
+      fullText += `--- ADDITIONAL NOTES (product, ICP, proof points) ---\n${String(ctx.text).trim().slice(0, MAX_NOTES)}\n`;
     }
 
     try {
       const wb = await this.getWebBridgeV1();
       if (wb && wb.mongoOk !== false && typeof wb.effectiveContext === 'string' && wb.effectiveContext.trim()) {
-        fullText += `--- COMMAND CENTER (WEB APP — STRATEGIC CONTEXT) ---\n${wb.effectiveContext.trim().slice(0, MAX_TEXT_CHARS)}\n\n`;
+        fullText += `--- COMMAND CENTER (WEB APP — STRATEGIC CONTEXT) ---\n${wb.effectiveContext.trim().slice(0, MAX_WEB)}\n\n`;
       }
     } catch {
       /* ignore */
@@ -410,9 +421,11 @@ const StorageManager = {
       await chrome.storage.local.set({ dailySession: session });
     }
 
-    const c = Number(session.count) || 0;
+    let c = Number(session.count) || 0;
     if (c > session.limit) {
-      session.count = 0;
+      // Cap instead of zeroing — shrinking the daily limit (e.g. Command Center sync) must not wipe real usage.
+      c = session.limit;
+      session.count = c;
       await chrome.storage.local.set({ dailySession: session });
     }
 
@@ -475,14 +488,19 @@ const StorageManager = {
   // ═══════════════════════════════════════
 
   normalizeDpProfileKey(url) {
+    if (typeof DpBridge !== 'undefined' && DpBridge.normalizeLinkedInUrl) {
+      return DpBridge.normalizeLinkedInUrl(url);
+    }
+    const s = String(url || '').trim();
+    if (!s) return '';
     try {
-      const u = new URL(String(url || '').trim());
-      return `${u.origin}${u.pathname}`.replace(/\/$/, '').toLowerCase();
+      const u = new URL(s);
+      u.hash = '';
+      u.search = '';
+      const p = u.pathname.replace(/\/+$/, '') || '';
+      return `${u.origin}${p}`.toLowerCase();
     } catch {
-      return String(url || '')
-        .split('?')[0]
-        .replace(/\/$/, '')
-        .toLowerCase();
+      return s.split('?')[0].replace(/\/$/, '').toLowerCase();
     }
   },
 

@@ -736,6 +736,12 @@
   margin: 4px 0 0;
 }
 
+.lw-kb-limits-hint {
+  margin: 6px 0 0;
+  line-height: 1.35;
+  max-width: 100%;
+}
+
 .lw-setup-li-signout {
   display: block;
   width: 100%;
@@ -1051,13 +1057,21 @@ textarea:focus {
 }
 .lw-file-list li {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
+  gap: 4px 8px;
   padding: 8px 10px;
   border: 1px solid var(--lw-border);
   border-radius: 8px;
   margin-bottom: 4px;
   background: var(--lw-surface);
+}
+.lw-file-chars-hint {
+  flex: 1 1 100%;
+  margin: 0 0 0 2px;
+  font-size: 0.7rem;
+  color: var(--lw-muted);
 }
 .lw-file-list button {
   border: none;
@@ -1316,6 +1330,51 @@ textarea:focus {
   color: var(--lw-coral);
   border: 1px solid rgba(255, 107, 107, 0.35);
 }
+button.lw-ai-chip {
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+button.lw-ai-chip:hover {
+  filter: brightness(0.97);
+}
+button.lw-ai-chip:focus-visible {
+  outline: 2px solid var(--lw-coral);
+  outline-offset: 2px;
+}
+.lw-recco-tone-compare {
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  border-radius: var(--lw-radius-sm);
+  background: rgba(255, 127, 110, 0.05);
+  border: 1px solid rgba(255, 127, 110, 0.18);
+}
+.lw-recco-tone-compare__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 12px;
+  margin-bottom: 6px;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+.lw-recco-tone-compare__row:last-of-type {
+  margin-bottom: 0;
+}
+.lw-recco-tone-compare__k {
+  font-weight: 700;
+  color: var(--lw-muted);
+  min-width: 5.5rem;
+}
+.lw-recco-tone-compare__v {
+  font-weight: 700;
+  color: var(--lw-text);
+}
+.lw-recco-tone-compare__v--ai {
+  color: var(--lw-coral);
+}
 .lw-ai-chip__spark {
   flex-shrink: 0;
   opacity: 0.95;
@@ -1534,10 +1593,6 @@ textarea:focus {
 .lw-ai-block__head .lw-label-upper {
   color: var(--lw-faint);
 }
-.lw-ai-block__kb-hint {
-  margin: -4px 0 10px;
-  line-height: 1.4;
-}
 .lw-draft-area {
   width: 100%;
   min-height: 128px;
@@ -1635,11 +1690,15 @@ textarea:focus {
 }
 .lw-progress-bar {
   height: 10px;
+  width: 100%;
   border-radius: 6px;
   overflow: hidden;
   background: #eef0f3;
 }
 .lw-progress-fill {
+  display: block;
+  width: 0%;
+  min-width: 0;
   height: 100%;
   background: linear-gradient(90deg, #ff9800, #ffb74d);
   border-radius: 6px;

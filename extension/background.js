@@ -500,6 +500,7 @@ function ensureAvailableChannelsOnProfile(profile) {
 
 function formatTargetRichContext(profile, opts) {
   const forRec = !!(opts && opts.forRecommendation);
+  const forDraft = !!(opts && opts.forDraft);
   const p = profile || {};
   const about = (p.about || '').slice(0, forRec ? 5200 : 3200);
   const loc = p.location || '';
@@ -513,7 +514,7 @@ function formatTargetRichContext(profile, opts) {
   const contactBlock = [p.contactSummary && `Contact / links (visible): ${p.contactSummary}`, ws && `Websites:\n${ws}`]
     .filter(Boolean)
     .join('\n');
-  return `Profile URL: ${url || '(unknown)'}
+  const core = `Profile URL: ${url || '(unknown)'}
 Name: ${p.name || ''}
 Headline (summary line): ${p.headline || ''}
 Current position / job title (from top experience if parsed): ${p.currentPosition || '—'}
@@ -536,6 +537,11 @@ Connection degree: ${p.degree || 'unknown'}
 Mutual connections: ${p.mutualConnections ?? 0}
 Open profile (free InMail / Open Profile badge): ${p.isOpenProfile ? 'Yes' : 'No'}
 Profile action buttons detected (from page): Connect=${!!p.availableChannels?.connect}, Message=${!!p.availableChannels?.message}, InMail=${!!p.availableChannels?.inmail}`;
+  if (!forDraft) return core;
+  return `${core}
+
+--- Drafting discipline (read before writing) ---
+Infer priorities from About, roles, education, and skills first. The relationship row (degree, mutuals, follower/network counts) is for framing only: do NOT use it as cheap filler, openers, or social-proof padding. Cite substance — initiatives, companies, themes, credible overlap with the sender KB — not raw stats.`;
 }
 
 /** Rule-based fit % for all three channels (for UI when LinkedIn only exposed one button). */
@@ -964,8 +970,6 @@ async function composeNoteGenerationPrompt(payload, extraBlock) {
   if (!identity || !identity.name) {
     throw new Error('Missing profile setup. Open LynkWell AI and complete your name and role.');
   }
-  const wbTone = await StorageManager.getWebBridgeTone();
-  if (wbTone) tone = wbTone;
   outreach = outreach && typeof outreach === 'object' ? outreach : {};
   const mode = outreach.mode === 'bridge' ? 'bridge' : 'intro';
   const hasPrior = !!outreach.hasPriorSend;
@@ -984,7 +988,7 @@ async function composeNoteGenerationPrompt(payload, extraBlock) {
     ? `YOUR KNOWLEDGE BASE (mission, uploaded files, additional notes — you MUST tie the draft to this when relevant; quote themes or vocabulary, not long passages):\n${contextText}`
     : kbTrim.length > 40
       ? `SENDER CONTEXT (name/role — add mission, files, and notes via Edit Settings in the extension for stronger positioning):\n${contextText}`
-      : `YOUR KNOWLEDGE BASE: Add your mission, uploaded documents, and additional notes under **Edit Settings** so drafts match how you sell and who you help. For this message, still write a highly specific note using the TARGET section below plus sender name/role. Reference at least TWO concrete facts from the target (headline, about, experience, location, or mutuals). Avoid generic openers without a specific follow-up.`;
+      : `YOUR KNOWLEDGE BASE: Add your mission, uploaded documents, and additional notes under **Edit Settings** so drafts match how you sell and who you help. For this message, still write a highly specific note using the TARGET section below plus sender name/role. Reference at least TWO concrete facts from the target (headline, about, experience, education, skills, or location). Avoid generic openers without a specific follow-up.`;
 
   const positiveExamples = await StorageManager.getPositiveExamples(channel, tone, 5);
   const negativeExamples = await StorageManager.getNegativeExamples(channel, tone, 5);
@@ -1001,6 +1005,13 @@ async function composeNoteGenerationPrompt(payload, extraBlock) {
   } else {
     constraints = `Conversational 1st-degree DM: aim 400–${L.message} characters (stay under ${L.message}). Specific inquiry or follow-up, clear CTA. No subject line.`;
   }
+
+  const channelDraftGuide =
+    channel === 'connection'
+      ? `CHANNEL SHAPE (Connection note): Short, human connect request. One credible bridge from their work/About/experience + one clear why-connect; no brochure dump.`
+      : channel === 'inmail'
+        ? `CHANNEL SHAPE (InMail): Executive skim — subject earns the open; body leads with relevance from their trajectory + your KB, one tight CTA.`
+        : `CHANNEL SHAPE (DM): Thread-appropriate 1st-degree tone — peer-like, specific question or follow-up; not a cold-email template.`;
 
   let examplesStr = '';
   if (positiveExamples.length > 0) {
@@ -1028,7 +1039,7 @@ USER FEEDBACK — NOT HELPFUL: The drafts above were rejected. This NEW message 
 - Thread style: ${
     mode === 'bridge'
       ? 'Follow-up — the user previously saved a send for this same /in/ profile in the extension. Write like a natural LinkedIn follow-up (DM, InMail, or connect thread). Do not sound like a first cold ping unless the chosen channel clearly needs a fresh angle.'
-      : 'First save — no prior send saved in the extension for this profile URL. Write a clear first LinkedIn touch for this relationship (degree + channel shown on the page).'
+      : 'First save — no prior send saved in the extension for this profile URL. Write a clear first LinkedIn touch for the selected channel; ground it in profile substance, not generic network trivia.'
   }
 - Saved send in extension before: ${hasPrior ? 'yes' : 'no'}
 - Last saved send time (ISO, or none): ${priorTs}
@@ -1049,10 +1060,12 @@ CONSTRAINTS: ${constraints}
 TONE: ${tone === 'professional' ? 'Formal, value-driven, industry-relevant' : tone === 'casual' ? 'Warm, human, relatable' : 'Direct, brief, CTA-first'}
 
 RULES (non-negotiable):
-1) Use the TARGET block below: cite or clearly allude to at least TWO specific facts from their headline, About, any listed experience roles, education, skills, certifications, languages, location, or mutuals — not vague compliments.
+1) Use the TARGET block below: cite or clearly allude to at least TWO specific facts from their headline, About, listed experience, education, skills, certifications, languages, or location — not vague compliments. Do not use follower counts, total connections, raw mutual counts, or generic “we’re Nth degree” lines as hooks or padding.
 2) When the knowledge base at the top is non-empty, connect your angle to it (what they sell, who they help, mission, or uploaded doc themes). When it is sparse, still stay specific to the target only.
 3) Write in first person as the sender. No subject line unless InMail JSON requires it.
 4) If the sender’s KB implies a specific vertical or motion (e.g. tech ecosystem, founder, agency) and a generic “connect” angle would feel mismatched to the target’s headline/About, do **not** lean on vague flattery — be specific or acknowledge the gap honestly in the copy for the **channel the user already selected** in the extension.
+5) ${channelDraftGuide}
+6) Match TONE=${tone} throughout (this overrides any other tone hint).
 
 ${examplesStr ? '\n' + examplesStr : ''}${negCorrectionBlock}
 
@@ -1061,7 +1074,7 @@ Name: ${identity.name}
 Role: ${identity.role}
 
 TO TARGET (scraped from their LinkedIn profile — this is your primary personalization source):
-${formatTargetRichContext(profile)}
+${formatTargetRichContext(profile, { forDraft: true })}
 Primary company / employer line (if parsed): ${profile.company || '—'}
 
 ${channel === 'inmail'
@@ -1129,7 +1142,7 @@ async function handleAgentGenerateNote(payload) {
 
   const contextText = await StorageManager.getFullContext(identity);
   const kbForAgent = String(contextText || '').trim().slice(0, 8000);
-  const profileBlock = formatTargetRichContext(profile);
+  const profileBlock = formatTargetRichContext(profile, { forDraft: true });
 
   const researchPrompt = `You are a senior GTM researcher preparing one LinkedIn touch.
 OUTPUT ONLY valid JSON (no markdown) with this exact structure:
@@ -1140,6 +1153,8 @@ OUTPUT ONLY valid JSON (no markdown) with this exact structure:
   "factsToCite": ["4-10 short strings — literal facts from the scrape worth referencing"],
   "kbHooks": ["0-6 strings — how sender knowledge intersects this person; empty array if KB is thin"]
 }
+
+Do not treat follower counts, network size, connection degree, or mutual counts as “angles” or facts worth citing unless they support one substantive, named bridge (rare). Prefer roles, companies, themes from About, skills, education, and content signals.
 
 SENDER KNOWLEDGE (mission + files + notes):
 ${kbForAgent || '(none saved yet)'}
@@ -1174,6 +1189,8 @@ OUTPUT ONLY valid JSON:
 
 SELECTED_CHANNEL: ${channel}
 SELECTED_TONE: ${tone}
+
+DraftDirectives must steer the writer away from vanity-led hooks (followers, generic degree lines, mutual-count flex) and toward headline/About/experience/KB substance.
 
 SENDER_KB:
 ${kbForAgent.slice(0, 6000)}
@@ -1222,7 +1239,7 @@ OUTPUT ONLY valid JSON:
   "finalSubject": "InMail subject line or empty string if not InMail"
 }
 
-RULES: finalBody must still reflect at least TWO items from factsToCite (paraphrase ok). No markdown in final fields.
+RULES: finalBody must still reflect at least TWO items from factsToCite (paraphrase ok). No markdown in final fields. If the draft opens with follower counts, network size, or generic relationship stats without a substantive tie-in, revise to lead with profile/KB substance.
 
 factsToCite:
 ${JSON.stringify((researchObj.factsToCite || []).slice(0, 14))}

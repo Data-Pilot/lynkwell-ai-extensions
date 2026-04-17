@@ -118,6 +118,7 @@
         </button>
       </div>
       <textarea id="input-mission" rows="6" placeholder="Describe your company, who you help, and how you want to sound on LinkedIn…"></textarea>
+      <p id="kb-ai-limits-hint-setup" class="lw-small lw-text-muted lw-kb-limits-hint" aria-live="polite"></p>
     </div>
 
     <p class="lw-label-upper">Tone</p>
@@ -181,7 +182,7 @@
       <div class="lw-upload__stack">
         <p class="lw-upload__title" id="upload-zone-status-setup">Upload PDF or Doc</p>
         <p class="lw-upload__subtitle lw-small lw-text-muted">Pitch deck, one-pager, etc.</p>
-        <p class="lw-upload__formats lw-small lw-text-muted">.txt .pdf .csv .docx — max 5MB</p>
+        <p class="lw-upload__formats lw-small lw-text-muted">.txt .pdf .csv .docx .md .json — max 5MB each · first 10k chars/file in AI</p>
       </div>
       <input type="file" id="file-input-setup" accept=".txt,.csv,.pdf,.docx,.md,.json" multiple hidden>
     </div>
@@ -231,6 +232,7 @@
         </button>
       </div>
       <textarea id="input-mission-training" rows="6" placeholder="Describe your company, who you help, and how you want to sound on LinkedIn…"></textarea>
+      <p id="kb-ai-limits-hint-training" class="lw-small lw-text-muted lw-kb-limits-hint" aria-live="polite"></p>
     </div>
 
     <p class="lw-label-upper">Tone</p>
@@ -289,7 +291,7 @@
       <div class="lw-upload__stack">
         <p class="lw-upload__title" id="upload-zone-status">Upload PDF or Doc</p>
         <p class="lw-upload__subtitle lw-small lw-text-muted">Pitch deck, one-pager, etc.</p>
-        <p class="lw-upload__formats lw-small lw-text-muted">.txt .pdf .csv .docx — max 5MB</p>
+        <p class="lw-upload__formats lw-small lw-text-muted">.txt .pdf .csv .docx .md .json — max 5MB each · first 10k chars/file in AI</p>
       </div>
       <input type="file" id="file-input" accept=".txt,.csv,.pdf,.docx,.md,.json" multiple hidden>
     </div>
@@ -338,20 +340,32 @@
     <div class="lw-channel-block">
       <div class="lw-channel-head">
         <span class="lw-label-upper lw-label-upper--inline lw-channel-head__title">Channel</span>
-        <span id="recco-badge" class="lw-ai-chip hidden">
+        <button type="button" id="recco-badge" class="lw-ai-chip hidden" aria-expanded="false" title="Show why this channel and deeper analysis">
           <svg class="lw-ai-chip__spark" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l1.2 4.2L18 8l-4.8 1.8L12 14l-1.2-4.2L6 8l4.8-1.8L12 2zm0 10l.8 2.8L16 16l-3.2 1.2L12 20l-.8-2.8L8 16l3.2-1.2L12 12z"/></svg>
-          AI Recommended
-        </span>
+          <span class="lw-ai-chip__label">AI Recommended</span>
+        </button>
       </div>
       <div id="recco-loading" class="lw-recco-loading hidden" role="status" aria-live="polite">
         <span class="lw-spinner lw-recco-loading__spinner" aria-hidden="true"></span>
         <span id="recco-loading-text" class="lw-recco-loading__text">Analyzing profile for the best channel…</span>
       </div>
       <span id="recco-channel" class="hidden"></span>
-      <p id="recco-agent-pick" class="lw-recco-agent lw-small hidden" aria-live="polite"></p>
+      <div id="recco-tone-compare" class="lw-recco-tone-compare hidden" aria-live="polite">
+        <div class="lw-recco-tone-compare__row">
+          <span class="lw-recco-tone-compare__k">Your selection</span>
+          <span id="recco-tone-user" class="lw-recco-tone-compare__v"></span>
+        </div>
+        <div class="lw-recco-tone-compare__row">
+          <span class="lw-recco-tone-compare__k">AI suggests</span>
+          <span id="recco-tone-ai" class="lw-recco-tone-compare__v lw-recco-tone-compare__v--ai"></span>
+        </div>
+        <p class="lw-small lw-text-muted lw-mt-2">Tone pills below control what Generate uses — yours by default.</p>
+        <button type="button" id="btn-recco-use-ai-tone" class="lw-btn lw-btn--ghost lw-btn--sm lw-mt-2 hidden">Use AI tone for drafts</button>
+      </div>
       <p id="recco-reason" class="lw-recco-reason lw-small lw-text-muted hidden"></p>
       <div id="recco-deep" class="lw-recco-deep hidden" aria-live="polite">
         <p class="lw-label-upper lw-recco-deep__title">Why this pick</p>
+        <p id="recco-agent-pick" class="lw-recco-agent lw-small hidden" aria-live="polite"></p>
         <p id="recco-analysis" class="lw-small lw-recco-analysis"></p>
         <p id="recco-tone-line" class="lw-small lw-recco-tone lw-mt-2 hidden"></p>
         <ul id="recco-plans" class="lw-recco-plans lw-small lw-text-muted lw-mt-2 hidden"></ul>
@@ -408,7 +422,6 @@
         <span class="lw-label-upper lw-label-upper--inline">AI MESSAGE</span>
         <span id="generator-tone-badge" class="lw-pill lw-pill--coral">Professional</span>
       </div>
-      <p id="kb-context-hint" class="lw-ai-block__kb-hint lw-small lw-text-muted" role="status"></p>
       <textarea id="subject-editor" class="hidden lw-subject-input" rows="1" placeholder="Subject"></textarea>
       <textarea id="draft-editor" class="lw-draft-area" rows="6" placeholder="Your draft will appear here…"></textarea>
       <div class="lw-editor-foot">

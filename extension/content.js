@@ -110,7 +110,8 @@
       const u = new URL(href);
       u.hash = '';
       u.search = '';
-      return `${u.origin}${u.pathname}`.replace(/\/$/, '').toLowerCase();
+      const p = u.pathname.replace(/\/+$/, '') || '';
+      return `${u.origin}${p}`.toLowerCase();
     } catch {
       return String(href || '')
         .split('?')[0]
@@ -130,15 +131,28 @@
       return;
     }
     try {
-      const { webBridgeV1 } = await chrome.storage.local.get('webBridgeV1');
-      if (!webBridgeV1 || webBridgeV1.mongoOk === false || !Array.isArray(webBridgeV1.sentLog)) {
-        removeInstantlyBanner();
-        return;
-      }
+      const { webBridgeV1, dpSentLog } = await chrome.storage.local.get(['webBridgeV1', 'dpSentLog']);
       const cur = normalizeProfileUrlForBridge(location.href);
-      const hit = webBridgeV1.sentLog.find(
-        (e) => e && typeof e.linkedin_url === 'string' && normalizeProfileUrlForBridge(e.linkedin_url) === cur
-      );
+      let hit = null;
+      let fromExtensionLog = false;
+      if (webBridgeV1 && webBridgeV1.mongoOk !== false && Array.isArray(webBridgeV1.sentLog)) {
+        hit = webBridgeV1.sentLog.find(
+          (e) => e && typeof e.linkedin_url === 'string' && normalizeProfileUrlForBridge(e.linkedin_url) === cur
+        );
+      }
+      if (
+        !hit &&
+        dpSentLog &&
+        typeof dpSentLog === 'object' &&
+        !Array.isArray(dpSentLog) &&
+        dpSentLog[cur] &&
+        Number(dpSentLog[cur].lastSentAt) > 0
+      ) {
+        fromExtensionLog = true;
+        hit = {
+          sent_at: new Date(Number(dpSentLog[cur].lastSentAt)).toISOString()
+        };
+      }
       if (!hit) {
         removeInstantlyBanner();
         return;
@@ -153,14 +167,27 @@
         document.documentElement.appendChild(el);
       }
       const iso = hit.sent_at ? String(hit.sent_at) : '';
-      el.textContent = `LynkWell: Already emailed (Command Center)${iso ? ' · ' + iso : ''}`;
-      el.title = hit.instantly_campaign_id ? `Campaign: ${String(hit.instantly_campaign_id)}` : '';
+      if (fromExtensionLog) {
+        el.textContent = `LynkWell: Already contacted (extension)${iso ? ' · ' + iso : ''}`;
+        el.title = '';
+      } else {
+        el.textContent = `LynkWell: Already emailed (Command Center)${iso ? ' · ' + iso : ''}`;
+        el.title = hit.instantly_campaign_id ? `Campaign: ${String(hit.instantly_campaign_id)}` : '';
+      }
     } catch (_) {
       removeInstantlyBanner();
     }
   }
 
   setInterval(() => void refreshInstantlyBannerOnPage(), 5000);
+  try {
+    chrome.storage.onChanged.addListener((changes, area) => {
+      if (area !== 'local') return;
+      if (changes.webBridgeV1 || changes.dpSentLog) void refreshInstantlyBannerOnPage();
+    });
+  } catch (_) {
+    /* ignore */
+  }
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') void refreshInstantlyBannerOnPage();
   });

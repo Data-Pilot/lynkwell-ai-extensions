@@ -200,9 +200,16 @@ const FileParser = {
       return { valid: false, error: `Unsupported file type: ${ext}. Supported: ${supported.join(', ')}` };
     }
 
-    // 5MB limit per file
-    if (file.size > 5 * 1024 * 1024) {
-      return { valid: false, error: `File too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Max 5MB per file.` };
+    const maxBytes =
+      typeof StorageManager !== 'undefined' && StorageManager.KNOWLEDGE_AI_LIMITS
+        ? StorageManager.KNOWLEDGE_AI_LIMITS.MAX_FILE_UPLOAD_BYTES
+        : 5 * 1024 * 1024;
+    const maxMb = (maxBytes / (1024 * 1024)).toFixed(0);
+    if (file.size > maxBytes) {
+      return {
+        valid: false,
+        error: `File too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Max ${maxMb}MB per file.`
+      };
     }
 
     return { valid: true };

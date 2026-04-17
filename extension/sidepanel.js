@@ -38,6 +38,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   let generatingLock = false;
   /** Last successful GET_RECOMMENDATION payload — reapplied after generate so the panel does not look “empty”. */
   let lastRecommendationPayload = null;
+  /** When true, show full reason + “Why this pick” (toggled via #recco-badge). */
+  let reccoAnalysisExpanded = false;
   /** Last /auth/activate failure message for the API-unavailable screen. */
   let lastApiActivateError = '';
   /** `intro` = no saved send for this /in/ URL. `bridge` = user saved a prior send (local extension history only). */
@@ -152,6 +154,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     reccoToneLine: document.getElementById('recco-tone-line'),
     reccoPlans: document.getElementById('recco-plans'),
     reccoAgentPick: document.getElementById('recco-agent-pick'),
+    reccoToneCompare: document.getElementById('recco-tone-compare'),
+    reccoToneUser: document.getElementById('recco-tone-user'),
+    reccoToneAi: document.getElementById('recco-tone-ai'),
+    btnReccoUseAiTone: document.getElementById('btn-recco-use-ai-tone'),
 
     channelTabs: document.getElementById('channel-tabs'),
     tonePills: document.getElementById('tone-pills'),
@@ -440,6 +446,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     syncActivationCodeVisibility();
     syncToneTilesFromSelect();
     void refreshSetupFileList();
+    syncKbAiLimitsHints();
   }
 
   function syncToneTilesFromSelect() {
@@ -561,6 +568,39 @@ document.addEventListener('DOMContentLoaded', async () => {
     syncToneTilesFromSelect();
   }
 
+  async function resolveUserOutreachTonePreference() {
+    const wt = await StorageManager.getWebBridgeTone();
+    if (wt) return { tone: wt, source: 'Command Center' };
+    const settings = await StorageManager.getSettings();
+    const t = String(settings.tone || 'professional').toLowerCase().trim();
+    const tone = t === 'casual' || t === 'direct' || t === 'professional' ? t : 'professional';
+    return { tone, source: 'Your setup' };
+  }
+
+  function syncReccoBadgeLabel() {
+    const btn = els.reccoBadge;
+    if (!btn) return;
+    const label = btn.querySelector('.lw-ai-chip__label');
+    if (label) label.textContent = reccoAnalysisExpanded ? 'Hide details' : 'AI Recommended';
+    btn.setAttribute('aria-expanded', reccoAnalysisExpanded ? 'true' : 'false');
+    btn.title = reccoAnalysisExpanded
+      ? 'Hide full channel analysis'
+      : 'Show why this channel and deeper analysis';
+  }
+
+  function syncReccoToneCompareStrip() {
+    if (!els.reccoToneCompare || !els.reccoToneUser || !els.reccoToneAi) return;
+    if (!lastRecommendationPayload || els.reccoToneCompare.classList.contains('hidden')) return;
+    const cur = getActiveTone();
+    els.reccoToneUser.textContent = formatToneWithEmoji(cur);
+    const aiT = lastRecommendationPayload.aiRecommendedTone;
+    const aiOk = aiT === 'professional' || aiT === 'casual' || aiT === 'direct';
+    els.reccoToneAi.textContent = aiOk ? formatToneWithEmoji(aiT) : '—';
+    if (els.btnReccoUseAiTone) {
+      els.btnReccoUseAiTone.classList.toggle('hidden', !aiOk || cur === aiT);
+    }
+  }
+
   function toneMeta(t) {
     const k = String(t || 'professional').toLowerCase();
     if (k === 'casual') return { emoji: '☕', label: 'Casual' };
@@ -631,7 +671,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     setActiveTab(els.tonePills, settings.tone);
     updateGeneratorToneBadge(settings.tone);
     await syncToneUIFromWebBridge();
-    updateSessionCounter();
+    await updateSessionCounter();
     await applyPostLinkedinSetupUi();
   }
 
@@ -675,7 +715,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     setActiveTab(els.tonePills, settings.tone);
     updateGeneratorToneBadge(settings.tone);
     await syncToneUIFromWebBridge();
-    updateSessionCounter();
+    await updateSessionCounter();
+    syncKbAiLimitsHints();
     showScreen('generator');
     void scanProfile({ autoDraftAfterAnalysis: true });
   }
@@ -701,10 +742,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   async function refreshSetupFileList() {
     if (!els.fileListSetup) return;
     const ctx = await StorageManager.getTrainingContext();
-    renderFileListInto(els.fileListSetup, ctx.files || [], async (index) => {
-      await StorageManager.removeTrainingFile(index);
-      await refreshSetupFileList();
-    });
+    renderFileListInto(
+      els.fileListSetup,
+      ctx.files || [],
+      async () => {
+        await refreshSetupFileList();
+      },
+      { showAiExcerpt: true }
+    );
   }
 
   async function handleFilesSetup(files) {
@@ -747,19 +792,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  async function refreshKnowledgeBaseHint() {
-    const el = document.getElementById('kb-context-hint');
-    if (!el) return;
-    const has = await StorageManager.hasKnowledgeBaseContent();
-    const tc = await StorageManager.getTrainingContext();
-    const settings = await StorageManager.getSettings();
-    const nFiles = (tc.files && tc.files.length) || 0;
-    const parts = [];
-    if (settings.mission && String(settings.mission).trim()) parts.push('mission');
-    if (nFiles) parts.push(nFiles === 1 ? '1 uploaded file' : `${nFiles} uploaded files`);
-    el.textContent = has
-      ? `This message is generated with your knowledge base (${parts.join(' · ')}) plus the open LinkedIn profile.`
-      : 'Add a mission or files under Edit Settings — until then, drafts still use your name/role and the scraped profile.';
+  function syncKbAiLimitsHints() {
+    const L = StorageManager.KNOWLEDGE_AI_LIMITS;
+    if (!L) return;
+    const mb = (L.MAX_FILE_UPLOAD_BYTES / (1024 * 1024)).toFixed(0);
+    const msg = `Drafts send mission (first ${L.MAX_MISSION_CHARS.toLocaleString()} chars), each reference file (first ${L.MAX_FILE_EXCERPT_CHARS.toLocaleString()} chars of extracted text), additional notes (${L.MAX_NOTES_CHARS.toLocaleString()}), and Command Center synced context (${L.MAX_WEB_BRIDGE_CONTEXT_CHARS.toLocaleString()}) to your AI server with the LinkedIn profile. Reference uploads: up to ${mb}MB per file.`;
+    ['kb-ai-limits-hint-setup', 'kb-ai-limits-hint-training'].forEach((id) => {
+      const n = document.getElementById(id);
+      if (n) n.textContent = msg;
+    });
   }
 
   function showScreen(screenId) {
@@ -795,7 +836,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (screenId === 'generator') {
       syncGeneratorDraftLayout();
       void pullLatestSessionProfileIntoUI();
-      void refreshKnowledgeBaseHint();
       startGeneratorProfileWatch();
     } else {
       stopGeneratorProfileWatch();
@@ -1005,7 +1045,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       missionTimeoutId = setTimeout(async () => {
         await StorageManager.saveSettings({ mission: els.missionTraining.value.trim() });
         setKbSyncBadge(true, 'Synced');
-        void refreshKnowledgeBaseHint();
       }, 600);
     });
   }
@@ -1068,7 +1107,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (els.missionTraining) els.missionTraining.value = String(r.text).trim();
         await StorageManager.saveSettings({ mission: els.missionTraining.value.trim() });
         setKbSyncBadge(true, 'Synced');
-        void refreshKnowledgeBaseHint();
       } else {
         alert((r && r.error) || 'Enhance failed. Ensure the API server is running and Gemini is configured in server/.env.');
       }
@@ -1171,6 +1209,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const nFiles = (ctx.files && ctx.files.length) || 0;
     setKbSyncBadge(hasMission || nFiles > 0, 'Synced');
     renderFileList(ctx.files || []);
+    syncKbAiLimitsHints();
     const sess = await StorageManager.getCloudSession();
     if (els.btnDisconnectCloud) els.btnDisconnectCloud.classList.toggle('hidden', !sess);
     await refreshLinkedInPanel();
@@ -1240,21 +1279,38 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  function renderFileListInto(listEl, files, onRemoved) {
+  function renderFileListInto(listEl, files, onRemoved, opts) {
     if (!listEl) return;
+    const showAiExcerpt = !!(opts && opts.showAiExcerpt);
+    const excerptCap = StorageManager.KNOWLEDGE_AI_LIMITS?.MAX_FILE_EXCERPT_CHARS ?? 10000;
     listEl.innerHTML = '';
     files.forEach((file, index) => {
       const li = document.createElement('li');
       const span = document.createElement('span');
       span.className = 'ellipsis';
-      span.style.maxWidth = '80%';
+      span.style.flex = '1 1 auto';
+      span.style.minWidth = '0';
       span.textContent = file.name || 'file';
+      span.title = file.name || 'file';
       const btn = document.createElement('button');
       btn.setAttribute('data-index', String(index));
       btn.title = 'Remove file';
       btn.textContent = '✕';
+      btn.style.flexShrink = '0';
       li.appendChild(span);
       li.appendChild(btn);
+      if (showAiExcerpt) {
+        const len = String(file.content || '').length;
+        const sm = document.createElement('span');
+        sm.className = 'lw-file-chars-hint';
+        sm.textContent =
+          len > excerptCap
+            ? `${len.toLocaleString()} chars extracted · AI uses first ${excerptCap.toLocaleString()}`
+            : len > 0
+              ? `${len.toLocaleString()} chars in knowledge base`
+              : '';
+        if (sm.textContent) li.appendChild(sm);
+      }
       listEl.appendChild(li);
     });
 
@@ -1268,7 +1324,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function renderFileList(files) {
-    renderFileListInto(els.fileList, files, () => loadTrainingData());
+    renderFileListInto(els.fileList, files, () => loadTrainingData(), { showAiExcerpt: true });
   }
 
   // File upload (training screen)
@@ -1494,7 +1550,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function clearRecommendationUI() {
     setRecommendationLoading(false);
+    reccoAnalysisExpanded = false;
+    syncReccoBadgeLabel();
     if (els.reccoBadge) els.reccoBadge.classList.add('hidden');
+    if (els.reccoToneCompare) els.reccoToneCompare.classList.add('hidden');
+    if (els.btnReccoUseAiTone) els.btnReccoUseAiTone.classList.add('hidden');
     if (els.reccoAgentPick) {
       els.reccoAgentPick.textContent = '';
       els.reccoAgentPick.classList.add('hidden');
@@ -1652,7 +1712,12 @@ document.addEventListener('DOMContentLoaded', async () => {
           lastRecommendationPayload.channel,
           lastRecommendationPayload.reason,
           lastRecommendationPayload.scores,
-          lastRecommendationPayload.deepInsight
+          lastRecommendationPayload.deepInsight,
+          {
+            reccoDeepExpanded: reccoAnalysisExpanded,
+            userPreferredTone: lastRecommendationPayload.userPreferredTone,
+            userPreferredSource: lastRecommendationPayload.userPreferredSource
+          }
         );
       }
     }
@@ -1792,15 +1857,22 @@ document.addEventListener('DOMContentLoaded', async () => {
   function applyChannelMatchUI(bestChannel, reason, scores, deepInsight, uiOpts) {
     if (!els.channelTabs) return;
     const panelsOnly = !!(uiOpts && uiOpts.panelsOnly);
+    const expanded = !!(uiOpts && uiOpts.reccoDeepExpanded);
+    const userPrefToneRaw = uiOpts && uiOpts.userPreferredTone;
+    const userPrefSrcRaw = uiOpts && uiOpts.userPreferredSource;
     const avail = (currentProfile && currentProfile.availableChannels) || {};
     let ch = String(bestChannel || 'connection').toLowerCase();
     if (ch !== 'connection' && ch !== 'message' && ch !== 'inmail') ch = 'connection';
     if (els.reccoChannel) els.reccoChannel.textContent = formatChannelName(ch);
+    const reasonStr = String(reason || '').trim();
     if (els.reccoReason) {
-      els.reccoReason.textContent = reason || '';
-      els.reccoReason.classList.toggle('hidden', !reason);
+      els.reccoReason.textContent = reasonStr;
+      els.reccoReason.classList.toggle('hidden', !reasonStr || !expanded);
     }
-    if (els.reccoBadge) els.reccoBadge.classList.remove('hidden');
+    if (els.reccoBadge) {
+      els.reccoBadge.classList.remove('hidden');
+      syncReccoBadgeLabel();
+    }
     if (!panelsOnly) {
       setActiveTab(els.channelTabs, ch);
     }
@@ -1840,19 +1912,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     const toneOk = tone === 'professional' || tone === 'casual' || tone === 'direct';
     const { label: toneLabel } = toneOk ? toneMeta(tone) : { label: '' };
     const tr = String(d.toneRationale || '').trim();
-    /** One headline only: no bullet “reason” block (that stays hidden); never append full `reason` here. */
+    let userPrefTone = String(userPrefToneRaw || '').toLowerCase().trim();
+    if (userPrefTone !== 'professional' && userPrefTone !== 'casual' && userPrefTone !== 'direct') {
+      userPrefTone = 'professional';
+    }
     let agentLine = String(d.agentPick || '').trim();
     if (agentLine) {
       agentLine = agentLine.split(/\r?\n+/)[0].trim().slice(0, 220);
     }
-    if (!agentLine && toneOk && toneLabel) {
+    if (expanded && !agentLine && toneOk && toneLabel) {
       agentLine = `${formatChannelWithEmoji(ch)} + ${formatToneWithEmoji(tone)}`;
       const trOne = tr.split(/\r?\n+/)[0].trim().slice(0, 100);
       if (trOne) agentLine += `: ${trOne}`;
     }
     if (els.reccoAgentPick) {
       els.reccoAgentPick.textContent = agentLine || '';
-      els.reccoAgentPick.classList.toggle('hidden', !agentLine);
+      els.reccoAgentPick.classList.toggle('hidden', !agentLine || !expanded);
     }
     const plans = d.channelPlans && typeof d.channelPlans === 'object' ? d.channelPlans : {};
     const planRows = [
@@ -1864,14 +1939,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       const p = plans[k];
       return p && (p.whenToUse || p.toneTip || p.avoid);
     });
-    const showDeep = !!(ta || (toneOk && (toneLabel || tr)) || hasPlans);
+    const showDeep = !!expanded;
     if (els.reccoDeep) els.reccoDeep.classList.toggle('hidden', !showDeep);
     if (els.reccoAnalysis) els.reccoAnalysis.textContent = ta;
     if (els.reccoToneLine) {
-      if (toneOk && toneLabel) {
+      if (expanded && toneOk && toneLabel) {
         els.reccoToneLine.classList.remove('hidden');
         const te = formatToneWithEmoji(tone);
-        els.reccoToneLine.textContent = tr ? `Tone: ${te} — ${tr}` : `Tone: ${te}`;
+        els.reccoToneLine.textContent = tr ? `AI tone: ${te} — ${tr}` : `AI tone: ${te}`;
       } else {
         els.reccoToneLine.textContent = '';
         els.reccoToneLine.classList.add('hidden');
@@ -1903,15 +1978,23 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
       els.reccoPlans.classList.toggle('hidden', !els.reccoPlans.children.length);
     }
-    if (toneOk && els.tonePills && !panelsOnly) {
-      setActiveTab(els.tonePills, tone);
+    if (els.tonePills && !panelsOnly) {
+      setActiveTab(els.tonePills, userPrefTone);
+      updateGeneratorToneBadge(userPrefTone);
+    }
+
+    if (els.reccoToneCompare) {
+      els.reccoToneCompare.classList.remove('hidden');
     }
 
     const dStore = deepInsight && typeof deepInsight === 'object' ? deepInsight : {};
     lastRecommendationPayload = {
       channel: ch,
-      reason: String(reason || '').trim(),
+      reason: reasonStr,
       scores: s,
+      userPreferredTone: userPrefTone,
+      userPreferredSource: String(userPrefSrcRaw || 'Your setup').trim() || 'Your setup',
+      aiRecommendedTone: toneOk ? tone : '',
       deepInsight: {
         targetAnalysis: String(dStore.targetAnalysis || '').trim(),
         recommendedTone: String(dStore.recommendedTone || '').trim(),
@@ -1922,6 +2005,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         channelPlans: dStore.channelPlans && typeof dStore.channelPlans === 'object' ? dStore.channelPlans : {}
       }
     };
+    syncReccoToneCompareStrip();
   }
 
   async function getRecommendation(profile, opts = {}) {
@@ -1937,14 +2021,25 @@ document.addEventListener('DOMContentLoaded', async () => {
         payload: { profile, identity }
       });
       if (resp && resp.success) {
-        applyChannelMatchUI(resp.channel, resp.reason, resp.scores, {
-          targetAnalysis: resp.targetAnalysis,
-          recommendedTone: resp.recommendedTone,
-          toneRationale: resp.toneRationale,
-          channelPlans: resp.channelPlans,
-          agentPick: resp.agentPick,
-          shadowScores: resp.shadowScores
-        });
+        const pref = await resolveUserOutreachTonePreference();
+        applyChannelMatchUI(
+          resp.channel,
+          resp.reason,
+          resp.scores,
+          {
+            targetAnalysis: resp.targetAnalysis,
+            recommendedTone: resp.recommendedTone,
+            toneRationale: resp.toneRationale,
+            channelPlans: resp.channelPlans,
+            agentPick: resp.agentPick,
+            shadowScores: resp.shadowScores
+          },
+          {
+            reccoDeepExpanded: reccoAnalysisExpanded,
+            userPreferredTone: pref.tone,
+            userPreferredSource: pref.source
+          }
+        );
         return true;
       }
       if (resp && resp.error) console.warn('Recommendation:', resp.error);
@@ -2032,10 +2127,40 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  if (els.reccoBadge) {
+    els.reccoBadge.addEventListener('click', () => {
+      if (els.reccoBadge.classList.contains('hidden') || !lastRecommendationPayload) return;
+      reccoAnalysisExpanded = !reccoAnalysisExpanded;
+      applyChannelMatchUI(
+        lastRecommendationPayload.channel,
+        lastRecommendationPayload.reason,
+        lastRecommendationPayload.scores,
+        lastRecommendationPayload.deepInsight,
+        {
+          reccoDeepExpanded: reccoAnalysisExpanded,
+          userPreferredTone: lastRecommendationPayload.userPreferredTone,
+          userPreferredSource: lastRecommendationPayload.userPreferredSource
+        }
+      );
+    });
+  }
+
+  if (els.btnReccoUseAiTone) {
+    els.btnReccoUseAiTone.addEventListener('click', () => {
+      if (!lastRecommendationPayload) return;
+      const t = lastRecommendationPayload.aiRecommendedTone;
+      if (t !== 'professional' && t !== 'casual' && t !== 'direct') return;
+      if (els.tonePills) setActiveTab(els.tonePills, t);
+      updateGeneratorToneBadge(t);
+      syncReccoToneCompareStrip();
+    });
+  }
+
   if (els.tonePills) {
     els.tonePills.addEventListener('click', (e) => {
       const b = e.target.closest('button[data-val]');
       if (b) setActiveTab(els.tonePills, b.dataset.val);
+      syncReccoToneCompareStrip();
     });
   }
 
@@ -2321,7 +2446,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             lastRecommendationPayload.reason,
             lastRecommendationPayload.scores,
             lastRecommendationPayload.deepInsight,
-            { panelsOnly: true }
+            {
+              panelsOnly: true,
+              reccoDeepExpanded: reccoAnalysisExpanded,
+              userPreferredTone: lastRecommendationPayload.userPreferredTone,
+              userPreferredSource: lastRecommendationPayload.userPreferredSource
+            }
           );
         }
         els.editorContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
@@ -2514,7 +2644,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         await applyKbDailyLimitUi();
         await syncToneUIFromWebBridge();
         await updateSessionCounter();
-        void refreshKnowledgeBaseHint();
         if (currentProfile) await refreshSentLogBanner(currentProfile);
       })();
     }
