@@ -113,6 +113,24 @@ const StorageManager = {
     await this.setAuthMode('cloud');
   },
 
+  /**
+   * Team zip / default URL upgrades: if chrome.storage still points at local Docker but this build
+   * defaults to another host (e.g. Vercel), drop the old session so auto-activate uses the bundle.
+   */
+  async migrateStaleLocalApiSession(bundledApiBase) {
+    const next = String(bundledApiBase || '')
+      .trim()
+      .replace(/\/$/, '');
+    if (!next) return;
+    const sess = await this.getCloudSession();
+    if (!sess?.baseUrl || !sess?.token) return;
+    const cur = String(sess.baseUrl).trim().replace(/\/$/, '');
+    const localDev = new Set(['http://127.0.0.1:3847', 'http://localhost:3847']);
+    if (localDev.has(cur) && cur !== next) {
+      await this.clearCloudSession();
+    }
+  },
+
   // ═══════════════════════════════════════
   //  LINKEDIN OAUTH (OpenID — access token + profile/email in extension)
   // ═══════════════════════════════════════════════════════════════

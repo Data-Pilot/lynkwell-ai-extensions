@@ -151,11 +151,14 @@ async function handleActivateCloud(payload) {
 }
 
 async function getConfiguredApiBaseUrl() {
+  const bundled =
+    typeof REACHAI_DEFAULT_API_BASE !== 'undefined' && REACHAI_DEFAULT_API_BASE
+      ? String(REACHAI_DEFAULT_API_BASE).trim().replace(/\/$/, '')
+      : '';
+  await StorageManager.migrateStaleLocalApiSession(bundled);
   const sess = await StorageManager.getCloudSession();
   if (sess?.baseUrl) return String(sess.baseUrl).trim().replace(/\/$/, '');
-  if (typeof REACHAI_DEFAULT_API_BASE !== 'undefined' && REACHAI_DEFAULT_API_BASE) {
-    return String(REACHAI_DEFAULT_API_BASE).trim().replace(/\/$/, '');
-  }
+  if (bundled) return bundled;
   return '';
 }
 

@@ -223,11 +223,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const autoOn =
       typeof REACHAI_AUTO_ACTIVATE_FOR_LINKEDIN !== 'undefined' && REACHAI_AUTO_ACTIVATE_FOR_LINKEDIN;
     if (!autoOn) return false;
-    const existing = await StorageManager.getCloudSession();
-    if (existing?.token) {
-      lastApiActivateError = '';
-      return true;
-    }
     const base =
       typeof REACHAI_DEFAULT_API_BASE !== 'undefined' && REACHAI_DEFAULT_API_BASE
         ? String(REACHAI_DEFAULT_API_BASE).trim().replace(/\/$/, '')
@@ -245,6 +240,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       lastApiActivateError =
         'Add REACHAI_DEFAULT_ACTIVATION_CODE or a 16+ character REACHAI_EXTENSION_SECRET in reach-api-default.js to match server .env.';
       return false;
+    }
+    await StorageManager.migrateStaleLocalApiSession(base);
+    const existing = await StorageManager.getCloudSession();
+    if (existing?.token) {
+      lastApiActivateError = '';
+      return true;
     }
     const aiRaw =
       typeof REACHAI_DEFAULT_AI_API_BASE !== 'undefined' && REACHAI_DEFAULT_AI_API_BASE
