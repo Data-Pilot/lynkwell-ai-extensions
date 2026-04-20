@@ -1,6 +1,6 @@
-# LinkWell extension — backend API contract
+# LynkWell AI extension — backend API contract
 
-This document is for engineers implementing (or re-implementing) a **compatible API** so the LinkWell Chrome extension can use your host instead of the bundled reference server in [server/index.js](../server/index.js).
+This document is for engineers implementing (or re-implementing) a **compatible API** so the LynkWell AI Chrome extension can use your host instead of the bundled reference server in [server/index.js](../server/index.js).
 
 The extension **never** sends your Gemini (or other model) API key from the client. It only sends **JWT** + **prompt text**; your server calls the model.
 
@@ -118,7 +118,7 @@ Implement the same routes as the reference server (paths matter):
 | `GET` | `/api/v1/oauth/linkedin/extension-flow/start` | Starts OAuth; requires valid `chrome_done` query param (extension callback URL). |
 | `GET` | `/api/v1/oauth/linkedin/extension-flow/callback` | LinkedIn redirects here; exchange code; redirect back with `handoff`. |
 | `GET` | `/api/v1/oauth/linkedin/extension-flow/complete` | Optional HTML “done” page. |
-| `POST` | `/api/v1/oauth/linkedin/extension-flow/exchange` | Body `{ "handoff" }` → JSON with ReachAI JWT + LinkedIn tokens (see reference implementation). |
+| `POST` | `/api/v1/oauth/linkedin/extension-flow/exchange` | Body `{ "handoff" }` → JSON with LynkWell AI JWT + LinkedIn tokens (see reference implementation). |
 
 **Public URL:** Your server must know **`REACHAI_PUBLIC_URL`** (or equivalent) so `callback_url` matches what is registered on **LinkedIn Developer Portal → Auth → Redirect URLs**.
 

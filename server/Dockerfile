@@ -1,4 +1,4 @@
-# ReachAI Cloud API — run without installing Node on the host (only Docker).
+# LynkWell AI Cloud API — run without installing Node on the host (only Docker).
 FROM node:20-alpine
 
 RUN apk add --no-cache wget

@@ -6,7 +6,7 @@
   --lw-muted: #64748b;
   --lw-faint: #94a3b8;
   --lw-border: #e2e8f0;
-  /* Coral — LynkWell brand mark (~#EE765E) */
+  /* Coral — LynkWell AI brand mark (~#EE765E) */
   --lw-coral: #ee765e;
   --lw-coral-hover: #e06452;
   --lw-coral-soft: #fff4f2;
@@ -46,7 +46,7 @@
 
 .hidden { display: none !important; }
 
-/* LynkWell typography & layout utilities (use these only — no generic .small / .text-muted) */
+/* LynkWell AI typography & layout utilities (use these only — no generic .small / .text-muted) */
 .lw-small {
   font-size: 0.75rem;
 }

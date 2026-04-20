@@ -1,6 +1,6 @@
-# LinkWell AI — how the codebase works
+# LynkWell AI — how the codebase works
 
-This document describes the LinkWell AI repository: a Chrome MV3 extension plus a small Node/Express API. The extension scrapes LinkedIn in-page, stores context locally, and sends prompts to your backend; the server holds the Gemini API key and returns model text.
+This document describes the LynkWell AI repository: a Chrome MV3 extension plus a small Node/Express API. The extension scrapes LinkedIn in-page, stores context locally, and sends prompts to your backend; the server holds the Gemini API key and returns model text.
 
 ## High-level architecture
 

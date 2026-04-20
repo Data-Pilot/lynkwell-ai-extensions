@@ -1,6 +1,6 @@
 # Deploy the LynkWell API (`server/`) on Vercel
 
-The ReachAI Express app lives under **`server/`**. Vercel runs it as one serverless function via **`server/api/index.js`**, which loads **`server/index.js`**.
+The LynkWell AI Express app lives under **`server/`**. Vercel runs it as one serverless function via **`server/api/index.js`**, which loads **`server/index.js`**.
 
 ## Option A — Vercel dashboard (fastest)
 

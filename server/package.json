@@ -2,7 +2,7 @@
   "name": "reachai-api",
   "version": "1.0.0",
   "private": true,
-  "description": "ReachAI hosted API — Gemini key stays on server; extension uses JWT after activation code.",
+  "description": "LynkWell AI hosted API — Gemini key stays on server; extension uses JWT after activation code.",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",

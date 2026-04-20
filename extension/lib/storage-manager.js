@@ -1,4 +1,4 @@
-// ReachAI — Storage Manager
+// LynkWell AI — Storage Manager
 // Manages all chrome.storage.local operations for identity, context, feedback, and sessions
 
 const StorageManager = {

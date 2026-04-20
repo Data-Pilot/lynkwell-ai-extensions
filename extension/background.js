@@ -1,6 +1,12 @@
-importScripts('lib/dp-bridge.js', 'lib/storage-manager.js', 'lib/channel-limits.js', 'lib/reach-api-default.js');
+importScripts(
+  'lib/dp-bridge.js',
+  'lib/storage-manager.js',
+  'lib/channel-limits.js',
+  'lib/inmail-json-recover.js',
+  'lib/reach-api-default.js'
+);
 
-// ReachAI — Service worker: all AI calls go to your API (JWT); Gemini stays on the server.
+// LynkWell AI — Service worker: all AI calls go to your API (JWT); Gemini stays on the server.
 
 chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
 
@@ -170,13 +176,13 @@ async function openSidePanelForLastFocusedWindow() {
     if (wid == null) return;
     await chrome.sidePanel.open({ windowId: wid });
   } catch (e) {
-    console.warn('[LynkWell] sidePanel.open:', e && e.message);
+    console.warn('[LynkWell AI] sidePanel.open:', e && e.message);
   }
 }
 
 /**
  * LinkedIn OAuth: redirect hits YOUR API (register callback URL on LinkedIn).
- * Issues ReachAI JWT + LinkedIn token without a prior activate session.
+ * Issues LynkWell AI JWT + LinkedIn token without a prior activate session.
  */
 async function handleLinkedInOAuthViaApiCallback() {
   const baseUrl = await getConfiguredApiBaseUrl();
@@ -278,7 +284,7 @@ async function handleLinkedInOAuthViaApiCallback() {
 
 /**
  * LinkedIn OAuth 2.0 (classic): redirect_uri is *.chromiumapp.org/linkedin.
- * Requires an existing ReachAI JWT (activate first).
+ * Requires an existing LynkWell AI JWT (activate first).
  */
 async function handleLinkedInOAuthStart() {
   const viaApi =
@@ -642,9 +648,15 @@ function tryParseInMailPayload(rawText) {
       if (!subject) subject = String(d.subject ?? d.Subject ?? '').trim();
       if (!body) body = String(d.body ?? d.Body ?? d.message ?? d.text ?? '').trim();
     }
-    if (!body) return null;
+    if (!body) {
+      const loose = recoverInMailFieldsFromRaw(rawText);
+      if (loose && loose.body) return { subject: loose.subject || subject, body: loose.body };
+      return null;
+    }
     return { subject, body };
   } catch {
+    const loose = recoverInMailFieldsFromRaw(rawText);
+    if (loose && loose.body) return { subject: loose.subject || '', body: loose.body };
     return null;
   }
 }
@@ -839,7 +851,7 @@ No mission, files, or notes saved yet — infer fit only from sender name/role b
 `;
 
   const prompt = `${kbBlock}${webToneLine}
-You are LynkWell's autonomous LinkedIn outreach AGENT.
+You are LynkWell AI's autonomous LinkedIn outreach AGENT.
 
 You receive TWO primary signals — treat them as **equally important**:
 • (A) SENDER KNOWLEDGE BASE / context (at the very top of this prompt): who the user is, who they sell to, ICP, proof, taboos.
@@ -996,14 +1008,18 @@ async function composeNoteGenerationPrompt(payload, extraBlock) {
   const L =
     typeof REACH_CHANNEL_LIMITS !== 'undefined'
       ? REACH_CHANNEL_LIMITS
-      : { connection: 300, message: 800, inmailCombined: 2000 };
+      : { connection: 200, message: 3000, inmailSubjectMax: 200, inmailBodyMax: 1900 };
+  const inSub = Number(L.inmailSubjectMax) || 200;
+  const inBody = Number(L.inmailBodyMax) || 1900;
+  const connCap = Number(L.connection) || 200;
+  const dmCap = Number(L.message) || 3000;
   let constraints = '';
   if (channel === 'connection') {
-    constraints = `Max ${L.connection} characters (LinkedIn connection note cap). No subject line. One hook + clear connect ask.`;
+    constraints = `Max ${connCap} characters (LinkedIn connection note cap for standard accounts). No subject line. One hook + clear connect ask.`;
   } else if (channel === 'inmail') {
-    constraints = `JSON with "subject" (short, punchy, under ~${L.inmailSubjectHint} chars) and "body". Subject + body combined must stay under ${L.inmailCombined} characters total. Value proposition + clear CTA.`;
+    constraints = `JSON with "subject" and "body". LinkedIn InMail caps (separate — do not trade length between fields): subject max ${inSub} characters, body max ${inBody} characters. Value proposition + clear CTA.`;
   } else {
-    constraints = `Conversational 1st-degree DM: aim 400–${L.message} characters (stay under ${L.message}). Specific inquiry or follow-up, clear CTA. No subject line.`;
+    constraints = `Conversational 1st-degree DM: LinkedIn allows up to ${dmCap} characters per message; prefer concise (often ~300–600) unless the thread needs more. Stay at or under ${dmCap}. Specific inquiry or follow-up, clear CTA. No subject line.`;
   }
 
   const channelDraftGuide =
@@ -1078,7 +1094,7 @@ ${formatTargetRichContext(profile, { forDraft: true })}
 Primary company / employer line (if parsed): ${profile.company || '—'}
 
 ${channel === 'inmail'
-  ? "OUTPUT INSTRUCTION: Output ONLY a valid JSON object strictly with two keys: 'subject' and 'body'. Do not output markdown blocks or extra text."
+  ? "OUTPUT INSTRUCTION: Output ONLY a single JSON object with keys \"subject\" and \"body\" (string values). No markdown, no ``` fences, no commentary before or after. Keep body within the character cap so the JSON is complete and valid."
   : 'OUTPUT INSTRUCTION: Output ONLY the message text. No quotes, no markdown blocks, no extra labels.'}`;
 
   const aiUsage = channel === 'inmail' ? 'generate_structured' : 'generate';
@@ -1090,7 +1106,7 @@ function runNoteGenerationParse(channel, rawStr) {
   if (channel === 'inmail') {
     const mail = tryParseInMailPayload(s);
     if (mail) return { text: mail.body, subject: mail.subject };
-    console.error('[LynkWell] InMail JSON parse failed; first 500 chars:', s.slice(0, 500));
+    console.error('[LynkWell AI] InMail JSON parse failed; first 500 chars:', s.slice(0, 500));
     return { text: s, subject: '' };
   }
 
@@ -1167,7 +1183,7 @@ ${profileBlock}
   try {
     researchObj = parseJsonObjectFromModelText(await callAi(researchPrompt, 'agent_step'));
   } catch (e) {
-    console.warn('[LynkWell] agent research failed', e && e.message);
+    console.warn('[LynkWell AI] agent research failed', e && e.message);
     researchObj = null;
   }
   if (!researchObj || typeof researchObj !== 'object' || !String(researchObj.personSummary || '').trim()) {
@@ -1203,7 +1219,7 @@ ${JSON.stringify(researchObj).slice(0, 7000)}
   try {
     fitObj = parseJsonObjectFromModelText(await callAi(fitPrompt, 'agent_step'));
   } catch (e) {
-    console.warn('[LynkWell] agent fit failed', e && e.message);
+    console.warn('[LynkWell AI] agent fit failed', e && e.message);
     fitObj = null;
   }
   if (!fitObj || typeof fitObj !== 'object') fitObj = fallbackFitBlock();
@@ -1261,7 +1277,7 @@ ${String(draft.subject || '').slice(0, 400)}
           : { text: fb, subject: '' };
     }
   } catch (e) {
-    console.warn('[LynkWell] agent review failed', e && e.message);
+    console.warn('[LynkWell AI] agent review failed', e && e.message);
   }
 
   emit(5, 'Almost done…', '');

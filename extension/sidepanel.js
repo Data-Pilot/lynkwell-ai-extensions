@@ -264,7 +264,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
       if (!act || !act.success) {
         lastApiActivateError = String((act && act.error) || 'Activation failed').trim();
-        console.warn('[LynkWell] Auto-activate failed:', lastApiActivateError);
+        console.warn('[LynkWell AI] Auto-activate failed:', lastApiActivateError);
         return false;
       }
       lastApiActivateError = '';
@@ -272,7 +272,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       return true;
     } catch (e) {
       lastApiActivateError = String((e && e.message) || e || 'Network error').trim();
-      console.warn('[LynkWell] Auto-activate error:', e);
+      console.warn('[LynkWell AI] Auto-activate error:', e);
       return false;
     }
   }
@@ -1008,7 +1008,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     els.btnLogOut.addEventListener('click', async () => {
       if (
         !confirm(
-          'Log out of LynkWell? You will need your API activation (and LinkedIn again if your build requires it). Your knowledge base files and mission stay on this device.'
+          'Log out of LynkWell AI? You will need your API activation (and LinkedIn again if your build requires it). Your knowledge base files and mission stay on this device.'
         )
       ) {
         return;
@@ -1136,7 +1136,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       typeof REACHAI_LINKEDIN_LOGIN_VIA_API_CALLBACK !== 'undefined' && REACHAI_LINKEDIN_LOGIN_VIA_API_CALLBACK;
     if (sub) {
       sub.textContent = via
-        ? 'This URL is on your LynkWell API server. LinkedIn redirects the browser here after approval (set REACHAI_PUBLIC_URL on the server to match).'
+        ? 'This URL is on your LynkWell AI API server. LinkedIn redirects the browser here after approval (set REACHAI_PUBLIC_URL on the server to match).'
         : 'This URL is the Chrome extension callback (*.chromiumapp.org).';
     }
     if (via) {
@@ -1179,7 +1179,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         lead.textContent = 'Sign in with LinkedIn to personalize outreach on this device.';
       } else {
         lead.textContent =
-          'Sign in with LinkedIn after LynkWell connects (use “Connection help” if sign-in is not available).';
+          'Sign in with LinkedIn after LynkWell AI connects (use “Connection help” if sign-in is not available).';
       }
     }
     if (!els.btnLinkedinSkip) return;
@@ -1638,7 +1638,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         els.targetName.innerText = 'Not a member profile';
         if (els.targetHeadline) {
           els.targetHeadline.innerText =
-            'LynkWell needs a personal profile URL: linkedin.com/in/… (not feed, jobs, or search results). Open the member’s profile so the address bar shows /in/… .';
+            'LynkWell AI needs a personal profile URL: linkedin.com/in/… (not feed, jobs, or search results). Open the member’s profile so the address bar shows /in/… .';
         }
       } else {
         els.targetName.innerText = 'No LinkedIn profile';
@@ -2275,26 +2275,31 @@ document.addEventListener('DOMContentLoaded', async () => {
     return getActiveVal(els.tonePills) || 'professional';
   }
 
-  /** If the model returns fenced JSON in the body field, split subject/body in the panel (mirrors background parsing). */
+  /** If the model returns fenced or truncated JSON, split subject/body (same recovery as background). */
   function coerceInmailPayloadFromText(raw) {
-    try {
-      let s = String(raw ?? '').trim();
-      for (let i = 0; i < 12; i++) {
-        const before = s;
-        s = s.replace(/^\s*```(?:json|javascript|js)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
-        if (s === before) break;
-      }
-      s = s.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
-      const i = s.indexOf('{');
-      const j = s.lastIndexOf('}');
-      if (i < 0 || j <= i) return null;
-      const o = JSON.parse(s.slice(i, j + 1));
-      const body = String(o.body ?? o.Body ?? o.message ?? o.text ?? '').trim();
-      if (!body) return null;
-      return { body, subject: String(o.subject ?? o.Subject ?? '').trim() };
-    } catch {
-      return null;
+    let s = String(raw ?? '').trim();
+    for (let k = 0; k < 12; k++) {
+      const before = s;
+      s = s.replace(/^\s*```(?:json|javascript|js)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
+      if (s === before) break;
     }
+    s = s.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+    const i = s.indexOf('{');
+    const j = s.lastIndexOf('}');
+    if (i >= 0 && j > i) {
+      try {
+        const o = JSON.parse(s.slice(i, j + 1));
+        const body = String(o.body ?? o.Body ?? o.message ?? o.text ?? '').trim();
+        if (body) return { body, subject: String(o.subject ?? o.Subject ?? '').trim() };
+      } catch {
+        /* fall through to recover */
+      }
+    }
+    if (typeof recoverInMailFieldsFromRaw === 'function') {
+      const loose = recoverInMailFieldsFromRaw(raw);
+      if (loose && loose.body) return { body: loose.body, subject: loose.subject || '' };
+    }
+    return null;
   }
 
   // ═══════════════════════════════════════
@@ -2484,22 +2489,34 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ═══════════════════════════════════════
 
   function updateCharLimit() {
+    if (!els.charCount || !els.charLimit || !els.draftEditor || !els.subjectEditor) return;
     const channel = getActiveChannel();
     const L = typeof REACH_CHANNEL_LIMITS !== 'undefined'
       ? REACH_CHANNEL_LIMITS
-      : { connection: 300, message: 800, inmailCombined: 2000 };
-    let limit = L.connection;
-    if (channel === 'inmail') limit = L.inmailCombined;
-    if (channel === 'message') limit = L.message;
-    
-    els.charLimit.innerText = `/${limit}`;
-    const len = els.draftEditor.value.length + (channel === 'inmail' ? els.subjectEditor.value.length : 0);
-    els.charCount.innerText = len;
+      : { connection: 200, message: 3000, inmailSubjectMax: 200, inmailBodyMax: 1900 };
+    const subjLen = els.subjectEditor.value.length;
+    const bodyLen = els.draftEditor.value.length;
 
-    // Color logic
-    const ratio = len / limit;
-    if(ratio > 1) els.charCount.style.color = 'var(--danger)';
-    else if(ratio > 0.8) els.charCount.style.color = 'var(--warning)';
+    let ratio = 0;
+    if (channel === 'inmail') {
+      const sm = Number(L.inmailSubjectMax) || 200;
+      const bm = Number(L.inmailBodyMax) || 1900;
+      els.charCount.textContent = String(bodyLen);
+      els.charLimit.innerText = `/${bm} · s ${subjLen}/${sm}`;
+      ratio = Math.max(sm > 0 ? subjLen / sm : 0, bm > 0 ? bodyLen / bm : 0);
+    } else {
+      const limit =
+        channel === 'message'
+          ? Number(L.message) || 3000
+          : Number(L.connection) || 200;
+      els.charLimit.innerText = `/${limit}`;
+      els.charCount.textContent = String(bodyLen);
+      ratio = limit > 0 ? bodyLen / limit : 0;
+    }
+
+    if (!Number.isFinite(ratio)) ratio = 0;
+    if (ratio > 1) els.charCount.style.color = 'var(--danger)';
+    else if (ratio > 0.8) els.charCount.style.color = 'var(--warning)';
     else els.charCount.style.color = 'var(--success)';
   }
 

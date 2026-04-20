@@ -1,4 +1,4 @@
-# ReachAI — hackathon quick path (Docker)
+# LynkWell AI — hackathon quick path (Docker)
 
 1. **Gemini key** — In `server/.env`, set `GEMINI_API_KEY` from [Google AI Studio](https://aistudio.google.com/app/apikey). It must start with **`AIza`**.
 2. **API (Docker)** — From the **`server/`** folder:
@@ -12,7 +12,7 @@
    - **API callback (default `true`, recommended):** Register only the URL from **`GET /api/v1/oauth/linkedin/extension-flow/meta`** (your API path ending in `…/extension-flow/callback`). Set **`REACHAI_PUBLIC_URL`** to match how you open the API (`http://127.0.0.1:3847` vs `http://localhost:3847`). After LinkedIn approves, the server redirects to **`https://<extension-id>.chromiumapp.org/linkedin?handoff=…`** so Chrome can **close the sign-in window** and return to the extension (you do **not** register that chromium URL on LinkedIn).
    - **Chrome-only (`false`):** Register `https://<extension-id>.chromiumapp.org/linkedin` from the copy field (changes if you reload unpacked from another folder).  
    In [LinkedIn Developers](https://www.linkedin.com/developers/apps) → your app (**Client ID** must match the extension) → **Auth** → **Authorized redirect URLs** — paste **exactly**, save, then sign in again. Enable **Sign In with LinkedIn using OpenID Connect** under **Products** if prompted.
-6. **Demo** — Open a LinkedIn profile (`https://www.linkedin.com/in/...`) → ReachAI side panel.
+6. **Demo** — Open a LinkedIn profile (`https://www.linkedin.com/in/...`) → LynkWell AI side panel.
 7. **Knowledge base + profile** — In **Settings (gear)**: fill **Strategic goal / mission**, **Additional context**, and optional **files** so drafts use *your* story. Scroll the LinkedIn profile so **About** loads, then tap **Rescan** so the AI sees *their* interests.
 
 **If AI fails:** real **`AIza`** key, model **`gemini-2.5-flash`** in `.env`, then `docker compose up --build` again so the container reloads env.

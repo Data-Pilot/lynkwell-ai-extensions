@@ -1,5 +1,5 @@
 /**
- * LynkWell web app bridge — parse dp_config / dp_sent_log from Command Center localStorage.
+ * LynkWell AI web app bridge — parse dp_config / dp_sent_log from Command Center localStorage.
  * Loaded in service worker (importScripts) and in the side panel (before storage-manager.js).
  *
  * COMMAND_CENTER_ORIGIN + DAILY_LINKEDIN_LIMIT must stay aligned with the Next.js Command Center

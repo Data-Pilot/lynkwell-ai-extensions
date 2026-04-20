@@ -1,5 +1,5 @@
 /**
- * ReachAI Cloud API — product-style: Gemini on server, JWT for extensions.
+ * LynkWell AI Cloud API — Gemini on server, JWT for extensions.
  * Run: cp .env.example .env && npm install && npm start
  */
 const path = require('path');
@@ -39,8 +39,8 @@ const MAX_TOKENS = {
   /** Large KB + profile prompts need headroom; truncation breaks JSON.parse in the extension. */
   recommend: 4096,
   generate: 2048,
-  /** InMail drafts: JSON { subject, body } — same cap as generate */
-  generate_structured: 2048,
+  /** InMail JSON { subject, body } — body can be ~1900 chars; need headroom so Gemini does not truncate mid-string */
+  generate_structured: 4096,
   /** Extension multi-step agent: research / fit / review JSON */
   agent_step: 4096
 };
@@ -208,7 +208,7 @@ app.get('/api/v1/oauth/linkedin/extension-flow/meta', (_req, res) => {
 /**
  * LinkedIn OAuth where redirect_uri is THIS API (best for production HTTPS).
  * 1) Extension opens launchWebAuthFlow(start) → 302 LinkedIn → user approves → 302 callback here → exchange → JWT + handoff → 302 “complete” page.
- * 2) Extension POST /exchange with handoff → JSON (ReachAI JWT + LinkedIn token).
+ * 2) Extension POST /exchange with handoff → JSON (LynkWell AI JWT + LinkedIn token).
  *
  * Pass ?chrome_done=<encodeURIComponent(https://…chromiumapp.org/linkedin)> so the final
  * redirect lands on Chrome’s extension URL — otherwise launchWebAuthFlow may not close.
@@ -345,7 +345,7 @@ app.get('/api/v1/oauth/linkedin/extension-flow/callback', async (req, res) => {
 
 app.get('/api/v1/oauth/linkedin/extension-flow/complete', (_req, res) => {
   res.type('html').send(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Signed in</title></head><body>
-<p>LinkedIn sign-in finished. This tab should close automatically — return to the LynkWell side panel.</p>
+<p>LinkedIn sign-in finished. This tab should close automatically — return to the LynkWell AI side panel.</p>
 <p style="color:#666;font-size:14px">If you still see this page, reload the extension and run <strong>docker compose up --build</strong> so the API has the latest OAuth code (chrome_done redirect).</p>
 <script>try { window.close(); } catch (e) {}</script>
 </body></html>`);

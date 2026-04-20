@@ -168,10 +168,10 @@
       }
       const iso = hit.sent_at ? String(hit.sent_at) : '';
       if (fromExtensionLog) {
-        el.textContent = `LynkWell: Already contacted (extension)${iso ? ' · ' + iso : ''}`;
+        el.textContent = `LynkWell AI: Already contacted (extension)${iso ? ' · ' + iso : ''}`;
         el.title = '';
       } else {
-        el.textContent = `LynkWell: Already emailed (Command Center)${iso ? ' · ' + iso : ''}`;
+        el.textContent = `LynkWell AI: Already emailed (Command Center)${iso ? ' · ' + iso : ''}`;
         el.title = hit.instantly_campaign_id ? `Campaign: ${String(hit.instantly_campaign_id)}` : '';
       }
     } catch (_) {

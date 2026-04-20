@@ -1,5 +1,5 @@
 /**
- * LynkWell → your backend (Auth + optional separate AI host).
+ * LynkWell AI → your backend (Auth + optional separate AI host).
  *
  * Saved session in chrome.storage overrides these defaults after the user activates once.
  *
@@ -9,7 +9,7 @@
 
 // ╔══════════════════════════════════════════════════════════════════════════╗
 // ║  ONE PLACE — your API base URLs (no trailing slash)                      ║
-// ║  Default: hosted LynkWell API for team zips. For local Docker API, use  ║
+// ║  Default: hosted LynkWell AI API for team zips. For local Docker API, use  ║
 // ║  http://127.0.0.1:3847 and add that origin to extension/manifest.json.   ║
 // ╚══════════════════════════════════════════════════════════════════════════╝
 var REACHAI_MY_API_BASE_URL = 'https://lynkwell-ai-extensions.vercel.app';
@@ -72,7 +72,7 @@ var LINKEDIN_OAUTH_SCOPES = 'openid profile email';
 
 /**
  * true = LinkedIn redirects to YOUR API (set REACHAI_PUBLIC_URL on server; register callback on LinkedIn).
- * false = classic Chrome flow (*.chromiumapp.org/linkedin) — needs ReachAI JWT before LinkedIn.
+ * false = classic Chrome flow (*.chromiumapp.org/linkedin) — needs LynkWell AI JWT before LinkedIn.
  */
 var REACHAI_LINKEDIN_LOGIN_VIA_API_CALLBACK = true;
 

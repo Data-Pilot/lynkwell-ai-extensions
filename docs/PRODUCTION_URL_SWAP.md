@@ -1,4 +1,4 @@
-# Pointing LinkWell at production (API URL swap)
+# Pointing LynkWell AI at production (API URL swap)
 
 Use this checklist when your co-developer’s API is live and you want the extension to use **production** instead of local dev.
 
@@ -70,7 +70,7 @@ Mismatch here is the #1 cause of “LinkedIn sign-in failed” in production.
 After users activate once, **`chrome.storage`** may still hold an old JWT tied to another host. If you switch API URLs:
 
 - Use **Disconnect API** in the extension (if shown), or  
-- Clear extension storage for LinkWell in Chrome, then open the panel again so **`ACTIVATE_CLOUD`** runs against the new base URL.
+- Clear extension storage for LynkWell AI in Chrome, then open the panel again so **`ACTIVATE_CLOUD`** runs against the new base URL.
 
 ---
 

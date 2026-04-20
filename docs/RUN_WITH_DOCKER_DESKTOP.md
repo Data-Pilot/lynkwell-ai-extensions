@@ -1,4 +1,4 @@
-# Run LinkWell API with Docker Desktop
+# Run LynkWell AI API with Docker Desktop
 
 **New to this repo?** Start with the shorter **[EASY_SETUP.md](./EASY_SETUP.md)** (install Docker → `server` folder → `docker compose build` → `docker compose up -d` → Chrome extensions).
 

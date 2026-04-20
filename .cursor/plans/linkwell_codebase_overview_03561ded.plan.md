@@ -1,11 +1,11 @@
 ---
-name: LinkWell codebase overview
-overview: "LinkWell AI is a Chrome MV3 extension plus a small Node/Express API: the extension scrapes LinkedIn in-page, stores context locally, and sends prompts to your backend; the server holds the Gemini API key and returns model text. This document maps every major file and how data moves between them."
+name: LynkWell AI codebase overview
+overview: "LynkWell AI is a Chrome MV3 extension plus a small Node/Express API: the extension scrapes LinkedIn in-page, stores context locally, and sends prompts to your backend; the server holds the Gemini API key and returns model text. This document maps every major file and how data moves between them."
 todos: []
 isProject: false
 ---
 
-# LinkWell AI — how the codebase works
+# LynkWell AI — how the codebase works
 
 ## High-level architecture
 

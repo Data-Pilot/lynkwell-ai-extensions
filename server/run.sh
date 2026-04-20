@@ -1,5 +1,5 @@
 #!/bin/sh
-# Run ReachAI API from this folder (after npm install and .env configured).
+# Run LynkWell AI API from this folder (after npm install and .env configured).
 set -e
 cd "$(dirname "$0")"
 if [ ! -f .env ]; then

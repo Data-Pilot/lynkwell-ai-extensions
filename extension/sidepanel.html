@@ -80,7 +80,7 @@
     <div class="lw-api-down-card lw-card">
       <h2 class="lw-h2">Backend or AI unavailable</h2>
       <p class="lw-small lw-text-muted">
-        LynkWell uses <strong>your</strong> API for auth and your server’s <strong>Gemini</strong> (or configured model). This device could not get a valid session — fix the server, <code class="lw-code">.env</code>, or network, then retry.
+        LynkWell AI uses <strong>your</strong> API for auth and your server’s <strong>Gemini</strong> (or configured model). This device could not get a valid session — fix the server, <code class="lw-code">.env</code>, or network, then retry.
       </p>
       <pre id="api-unavailable-detail" class="lw-api-down-detail" aria-live="polite"></pre>
       <button type="button" id="btn-api-retry" class="lw-btn lw-btn--primary lw-btn--wide lw-mt-4">Retry connection</button>
@@ -430,7 +430,7 @@
           <button type="button" id="btn-feedback-yes" class="lw-icon-btn" aria-label="Yes">👍</button>
           <button type="button" id="btn-feedback-no" class="lw-icon-btn" aria-label="No">👎</button>
         </div>
-        <div class="lw-char-counter"><span id="char-count">0</span><span id="char-limit">/300</span></div>
+        <div class="lw-char-counter"><span id="char-count">0</span><span id="char-limit">/200</span></div>
       </div>
       <div class="lw-action-row" id="action-row-default">
         <button type="button" id="btn-copy" class="lw-btn lw-btn--primary lw-btn--copy">
@@ -472,6 +472,7 @@
   <script src="lib/storage-manager.js"></script>
   <script src="lib/reach-api-default.js"></script>
   <script src="lib/channel-limits.js"></script>
+  <script src="lib/inmail-json-recover.js"></script>
   <script src="lib/file-parser.js"></script>
   <script src="sidepanel.js"></script>
 </body>

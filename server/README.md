@@ -1,4 +1,4 @@
-# ReachAI Cloud API
+# LynkWell AI Cloud API
 
 **Simplest install (Docker + Chrome):** see [../docs/EASY_SETUP.md](../docs/EASY_SETUP.md).
 
@@ -79,7 +79,7 @@ Then in the extension use your computer’s LAN IP, e.g. `http://192.168.1.50:38
 
 ## Extension
 
-1. In ReachAI setup, set **API base URL** to your server (localhost for dev).
+1. In LynkWell AI setup, set **API base URL** to your server (localhost for dev).
 2. Local dev: copy `.env.example` → `.env` — use **`REACHAI_ACTIVATION_CODES`** (e.g. `LINKWELL-CHROME`) matching the extension’s **development** defaults in `extension/lib/reach-api-default.js` (`REACHAI_BUILD_PROFILE = 'development'`), or set a 16+ char **`REACHAI_EXTENSION_SECRET`** in both places for code-less activation. For production extension bundles, use `REACHAI_BUILD_PROFILE = 'production'` and `REACHAI_PRODUCTION_*` in that same file.
 3. Complete name / role / mission and **Get Started**.
 
@@ -98,7 +98,7 @@ Official overview: [Authenticate with OAuth 2.0 for native clients](https://lear
 1. Create a LinkedIn app and enable **Sign In with LinkedIn using OpenID Connect**.
 2. Set **Authorized redirect URL** to the exact string shown in the extension (Settings): `chrome.identity.getRedirectURL("linkedin")` → `https://<extension-id>.chromiumapp.org/linkedin`.
 3. Put **Client ID** in `extension/lib/reach-api-default.js` (`LINKEDIN_CLIENT_ID`) and **Client ID + Client Secret** in server `.env` (`LINKEDIN_CLIENT_ID`, `LINKEDIN_CLIENT_SECRET`). Optionally set `LINKEDIN_REDIRECT_URI` to that exact URL for production.
-4. User completes ReachAI setup first, then **Sign in with LinkedIn** in Settings. The extension verifies OAuth `state`, then your server exchanges the `code` for an access token (secret never leaves the server). Email comes from OpenID `userinfo` when the `email` scope is granted.
+4. User completes LynkWell AI setup first, then **Sign in with LinkedIn** in Settings. The extension verifies OAuth `state`, then your server exchanges the `code` for an access token (secret never leaves the server). Email comes from OpenID `userinfo` when the `email` scope is granted.
 
 ## Endpoints
 

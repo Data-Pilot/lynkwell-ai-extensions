@@ -1,4 +1,4 @@
-// ReachAI — File Parser
+// LynkWell AI — File Parser
 // Client-side text extraction from uploaded files (.txt, .csv, .pdf, .docx)
 
 const FileParser = {

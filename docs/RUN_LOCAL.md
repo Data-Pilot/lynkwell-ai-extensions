@@ -1,4 +1,4 @@
-# Run LinkWell locally (API + extension)
+# Run LynkWell AI locally (API + extension)
 
 This guide walks you from zero to a **working local setup**: Node API on your machine and the Chrome extension talking to it.
 
@@ -103,7 +103,7 @@ If you change **port** or use **LAN IP**, add a matching `host_permissions` entr
 
 ### 4. Use the side panel
 
-1. Click the LinkWell toolbar icon to open the **side panel** (or use the extension’s pinned action).
+1. Click the LynkWell AI toolbar icon to open the **side panel** (or use the extension’s pinned action).
 2. Complete onboarding if prompted (LinkedIn / API). With `REACHAI_AUTO_ACTIVATE_FOR_LINKEDIN` true, the extension often activates against `REACHAI_DEFAULT_API_BASE` automatically when the server and codes/secrets match.
 3. Open a LinkedIn **member profile** URL (`https://www.linkedin.com/in/...`) in the **same** window’s active tab.
 4. In the panel: pick channel/tone → **Generate with Gemini**.
