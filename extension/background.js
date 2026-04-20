@@ -1082,6 +1082,13 @@ RULES (non-negotiable):
 4) If the sender’s KB implies a specific vertical or motion (e.g. tech ecosystem, founder, agency) and a generic “connect” angle would feel mismatched to the target’s headline/About, do **not** lean on vague flattery — be specific or acknowledge the gap honestly in the copy for the **channel the user already selected** in the extension.
 5) ${channelDraftGuide}
 6) Match TONE=${tone} throughout (this overrides any other tone hint).
+7) HARD CHARACTER LIMIT (LinkedIn will reject longer text): ${
+    channel === 'connection'
+      ? `the entire output must be at most ${connCap} characters including spaces and line breaks — count before finishing; if too long, shorten aggressively while keeping two concrete target facts.`
+      : channel === 'inmail'
+        ? `"subject" at most ${inSub} characters and "body" at most ${inBody} characters (count separately; never exceed either).`
+        : `the entire output must be at most ${dmCap} characters including spaces and line breaks — stay under the cap even if the thread is warm.`
+  }
 
 ${examplesStr ? '\n' + examplesStr : ''}${negCorrectionBlock}
 
@@ -1101,32 +1108,82 @@ ${channel === 'inmail'
   return { prompt, aiUsage, channel };
 }
 
+/** Clip by UTF-16 length without splitting a surrogate pair at the end. */
+function clipUnicodeByLength(s, maxLen) {
+  const str = String(s ?? '');
+  if (!maxLen || maxLen < 1) return '';
+  if (str.length <= maxLen) return str;
+  let end = maxLen;
+  const hi = str.charCodeAt(end - 1);
+  if (hi >= 0xd800 && hi <= 0xdbff) end--;
+  if (end > 0) {
+    const lo = str.charCodeAt(end - 1);
+    if (lo >= 0xdc00 && lo <= 0xdfff) end--;
+  }
+  return str.slice(0, Math.max(0, end));
+}
+
+/** Model output often exceeds caps — enforce LinkedIn limits before showing / copying. */
+function enforceChannelCharLimits(channel, draft) {
+  const L =
+    typeof REACH_CHANNEL_LIMITS !== 'undefined'
+      ? REACH_CHANNEL_LIMITS
+      : { connection: 200, message: 3000, inmailSubjectMax: 200, inmailBodyMax: 1900 };
+  const text = String(draft?.text ?? '').trim();
+  const subject = String(draft?.subject ?? '').trim();
+  if (channel === 'inmail') {
+    return {
+      text: clipUnicodeByLength(text, Number(L.inmailBodyMax) || 1900),
+      subject: clipUnicodeByLength(subject, Number(L.inmailSubjectMax) || 200)
+    };
+  }
+  if (channel === 'connection') {
+    return { text: clipUnicodeByLength(text, Number(L.connection) || 200), subject: '' };
+  }
+  if (channel === 'message') {
+    return { text: clipUnicodeByLength(text, Number(L.message) || 3000), subject: '' };
+  }
+  return { text: clipUnicodeByLength(text, Number(L.message) || 3000), subject: '' };
+}
+
 function runNoteGenerationParse(channel, rawStr) {
   const s = String(rawStr ?? '').trim();
+  let text = '';
+  let subject = '';
+
   if (channel === 'inmail') {
     const mail = tryParseInMailPayload(s);
-    if (mail) return { text: mail.body, subject: mail.subject };
-    console.error('[LynkWell AI] InMail JSON parse failed; first 500 chars:', s.slice(0, 500));
-    return { text: s, subject: '' };
-  }
-
-  const looksLikeInMailJson =
-    /```(?:json)?/i.test(s) ||
-    (/^\s*\{/.test(s) && /"body"\s*:/.test(s)) ||
-    (/^\s*\{/.test(s) && /"subject"\s*:/.test(s));
-  if (looksLikeInMailJson) {
-    const mail = tryParseInMailPayload(s);
-    if (mail && mail.body) return { text: mail.body, subject: mail.subject || '' };
-    try {
-      const o = parseJsonObjectFromModelText(s);
-      const lone = String(o.body || o.message || o.text || o.content || '').trim();
-      if (lone) return { text: lone };
-    } catch {
-      /* fall through */
+    if (mail) {
+      text = mail.body;
+      subject = mail.subject;
+    } else {
+      console.error('[LynkWell AI] InMail JSON parse failed; first 500 chars:', s.slice(0, 500));
+      text = s;
     }
+  } else {
+    const looksLikeInMailJson =
+      /```(?:json)?/i.test(s) ||
+      (/^\s*\{/.test(s) && /"body"\s*:/.test(s)) ||
+      (/^\s*\{/.test(s) && /"subject"\s*:/.test(s));
+    if (looksLikeInMailJson) {
+      const mail = tryParseInMailPayload(s);
+      if (mail && mail.body) {
+        text = mail.body;
+        subject = mail.subject || '';
+      } else {
+        try {
+          const o = parseJsonObjectFromModelText(s);
+          const lone = String(o.body || o.message || o.text || o.content || '').trim();
+          if (lone) text = lone;
+        } catch {
+          /* fall through */
+        }
+      }
+    }
+    if (!text) text = s;
   }
 
-  return { text: s };
+  return enforceChannelCharLimits(channel, { text, subject });
 }
 
 function emitGenerateProgress(data) {
@@ -1242,6 +1299,17 @@ ${JSON.stringify(fitObj).slice(0, 3500)}
 
   emit(4, 'Self-check…', 'Accuracy + tone pass');
 
+  const Lim =
+    typeof REACH_CHANNEL_LIMITS !== 'undefined'
+      ? REACH_CHANNEL_LIMITS
+      : { connection: 200, message: 3000, inmailSubjectMax: 200, inmailBodyMax: 1900 };
+  const reviewLenRule =
+    channel === 'inmail'
+      ? `finalSubject ≤ ${Number(Lim.inmailSubjectMax) || 200} chars; finalBody ≤ ${Number(Lim.inmailBodyMax) || 1900} chars (count separately).`
+      : channel === 'connection'
+        ? `finalBody ≤ ${Number(Lim.connection) || 200} chars (connection note). finalSubject must be "".`
+        : `finalBody ≤ ${Number(Lim.message) || 3000} chars (DM). finalSubject must be "".`;
+
   let reviewIssues = [];
   try {
     const reviewPrompt = `You are a strict LinkedIn outreach editor. Channel is fixed to ${channel}; tone target is ${tone}.
@@ -1256,6 +1324,7 @@ OUTPUT ONLY valid JSON:
 }
 
 RULES: finalBody must still reflect at least TWO items from factsToCite (paraphrase ok). No markdown in final fields. If the draft opens with follower counts, network size, or generic relationship stats without a substantive tie-in, revise to lead with profile/KB substance.
+STRICT LENGTH (${channel}): ${reviewLenRule} Never exceed these caps — shorten if needed.
 
 factsToCite:
 ${JSON.stringify((researchObj.factsToCite || []).slice(0, 14))}
@@ -1282,8 +1351,9 @@ ${String(draft.subject || '').slice(0, 400)}
 
   emit(5, 'Almost done…', '');
 
+  const clipped = enforceChannelCharLimits(channel, draft);
   const agentTrace = `Deep agent · fit ${fitObj.fitScore}/100${
     reviewIssues.length ? ` · ${reviewIssues.length} polish note${reviewIssues.length === 1 ? '' : 's'}` : ' · review clean'
   }`;
-  return { ...draft, agentTrace };
+  return { ...clipped, agentTrace };
 }
