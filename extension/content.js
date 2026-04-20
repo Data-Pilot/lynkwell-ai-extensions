@@ -2,6 +2,7 @@
 // Passive: debounced DOM updates → chrome.storage.session for faster side panel reads.
 // Scrapes: identity, about, location, degree, channels, mutuals, open profile,
 // multiple experience roles, education, skills, certifications, languages.
+// About: on explicit SCRAPE_PROFILE we click LinkedIn’s “…more” / see-more control once so full text is in the DOM (passive debounce does not click).
 
 (() => {
   if (window.hasRunContentScript) return;
@@ -75,6 +76,8 @@
       (async () => {
         try {
           await new Promise((r) => setTimeout(r, SCRAPE_PASS1_MS));
+          expandLinkedInAboutIfCollapsed();
+          await new Promise((r) => setTimeout(r, 380));
           let data = scrapeProfile();
           await new Promise((r) => setTimeout(r, SCRAPE_PASS2_MS));
           data = mergeProfileSnapshots(data, scrapeProfile());
@@ -1143,8 +1146,8 @@
     return '';
   }
 
-  function scrapeAbout() {
-    const section =
+  function getProfileAboutSection() {
+    return (
       document.getElementById('about')?.closest('section') ||
       document.querySelector('section[data-section-id="about"]') ||
       [...document.querySelectorAll('section.artdeco-card')].find((sec) => {
@@ -1152,7 +1155,44 @@
         const h2 = sec.querySelector('h2, .pvs-header__title, span.pvs-header__title-text');
         const t = (h2 && h2.textContent) || '';
         return /\babout\b/i.test(t.trim());
-      });
+      }) ||
+      null
+    );
+  }
+
+  /** One programmatic click so LinkedIn expands truncated About (no manual “…more”). Used only from SCRAPE_PROFILE. */
+  function expandLinkedInAboutIfCollapsed() {
+    try {
+      const section = getProfileAboutSection();
+      if (!section || isInsideMessagingOrDialog(section)) return false;
+      const collapsed = section.querySelector('.inline-show-more-text--is-collapsed');
+      if (!collapsed) return false;
+      const btn =
+        collapsed.querySelector('button.inline-show-more-text__see-more') ||
+        collapsed.querySelector('button[aria-expanded="false"]') ||
+        [...collapsed.querySelectorAll('button, [role="button"]')].find((b) => {
+          const tx = clean(b.innerText || b.textContent || '');
+          return (
+            /^(…+|\.{3})\s*more$/i.test(tx) ||
+            /^see more$/i.test(tx) ||
+            /^show more$/i.test(tx)
+          );
+        });
+      if (!btn || typeof btn.click !== 'function') return false;
+      try {
+        btn.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      } catch (_) {
+        /* ignore */
+      }
+      btn.click();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function scrapeAbout() {
+    const section = getProfileAboutSection();
     if (!section) return '';
 
     const candidates = [];
