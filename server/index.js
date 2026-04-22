@@ -12,7 +12,14 @@ const jwt = require('jsonwebtoken');
 const PORT = Number(process.env.PORT) || 3847;
 /** Listen address: 127.0.0.1 (default) or 0.0.0.0 so other devices on your LAN can reach the API */
 const BIND_HOST = (process.env.BIND_HOST || '127.0.0.1').trim();
-const GEMINI_API_KEY = (process.env.GEMINI_API_KEY || '').trim();
+/** Strip BOM, whitespace, and wrapping quotes — common when copying from .env or Vercel UI. */
+function normalizeGeminiApiKey(raw) {
+  return String(raw || '')
+    .trim()
+    .replace(/^\uFEFF/, '')
+    .replace(/^["']+|["']+$/g, '');
+}
+const GEMINI_API_KEY = normalizeGeminiApiKey(process.env.GEMINI_API_KEY);
 const JWT_SECRET = (process.env.JWT_SECRET || '').trim();
 const RAW_CODES = (process.env.REACHAI_ACTIVATION_CODES || '')
   .split(',')
@@ -186,6 +193,7 @@ app.get('/api/v1/diagnose', (_req, res) => {
     bind: BIND_HOST,
     has_gemini_key: !!GEMINI_API_KEY,
     gemini_key_looks_like_ai_studio: !!GEMINI_API_KEY && GEMINI_API_KEY.startsWith('AIza'),
+    gemini_key_length: GEMINI_API_KEY ? GEMINI_API_KEY.length : 0,
     activation_codes_configured: RAW_CODES.length,
     extension_secret_configured: EXTENSION_SECRET.length >= 16,
     jwt_secret_ok: JWT_SECRET.length >= 16,
