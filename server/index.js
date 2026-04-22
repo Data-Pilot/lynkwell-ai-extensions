@@ -2,6 +2,7 @@
  * LynkWell AI Cloud API — Gemini on server, JWT for extensions.
  * Run: cp .env.example .env && npm install && npm start
  */
+const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
@@ -248,6 +249,21 @@ app.use(
   })
 );
 app.use(express.json({ limit: '2mb' }));
+
+const API_LANDING_HTML = path.join(__dirname, 'public', 'api-landing.html');
+
+app.get('/', (_req, res) => {
+  try {
+    const html = fs.readFileSync(API_LANDING_HTML, 'utf8');
+    return res.type('html').send(html);
+  } catch {
+    return res
+      .type('html')
+      .send(
+        '<!DOCTYPE html><html><head><meta charset="utf-8"><title>LynkWell AI API</title></head><body style="font-family:system-ui;margin:2rem"><h1>LynkWell AI API</h1><p><a href="/health">/health</a> · <a href="/api/v1/diagnose">/api/v1/diagnose</a></p></body></html>'
+      );
+  }
+});
 
 app.get('/health', (_req, res) => {
   res.json({ ok: true, service: 'reachai-api' });
