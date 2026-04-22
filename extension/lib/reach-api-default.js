@@ -34,7 +34,10 @@ var REACHAI_LINKEDIN_SIGNIN_REQUIRED = true;
 /** 'development' uses MY_* URLs above. 'production' uses REACHAI_PRODUCTION_* below for store builds. */
 var REACHAI_BUILD_PROFILE = 'development';
 
-/** Production only — set before shipping; leave empty while you only use Docker locally. */
+/**
+ * Production only — when REACHAI_BUILD_PROFILE === 'production', these replace MY_*.
+ * See docs/PRODUCTION_LAUNCH.md before shipping; do not commit real secrets to a public repo.
+ */
 var REACHAI_PRODUCTION_API_BASE = '';
 var REACHAI_PRODUCTION_AI_API_BASE = '';
 var REACHAI_PRODUCTION_ACTIVATION_CODE = '';

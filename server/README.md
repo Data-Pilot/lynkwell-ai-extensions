@@ -167,7 +167,11 @@ Put **Client ID** in the extension config and **Client ID + Client Secret** in s
 
 ## Production checklist
 
+Step-by-step order (Vercel env, LinkedIn callback, extension, verification): **[../docs/PRODUCTION_LAUNCH.md](../docs/PRODUCTION_LAUNCH.md)**.
+
+Short list:
+
 - Serve the API over **HTTPS**.
 - Use strong **`JWT_SECRET`**; rotate if leaked.
-- Prefer **`REACHAI_PRODUCTION_*`** in the extension for release builds — avoid shipping real secrets in **`MY_*`** defaults.
+- Prefer **`REACHAI_PRODUCTION_*`** in the extension for store-style builds — do not commit real secrets to a public repo.
 - Add your **production API origin** to **`extension/manifest.json`** `host_permissions`.
