@@ -9,6 +9,10 @@ const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 
+/** Pin algorithm to avoid JWT "alg" confusion; all tokens use HS256. */
+const JWT_ALG = 'HS256';
+const JWT_VERIFY_OPTS = { algorithms: [JWT_ALG] };
+
 const PORT = Number(process.env.PORT) || 3847;
 /** Listen address: 127.0.0.1 (default) or 0.0.0.0 so other devices on your LAN can reach the API */
 const BIND_HOST = (process.env.BIND_HOST || '127.0.0.1').trim();
@@ -55,8 +59,13 @@ const MAX_TOKENS = {
 const AI_USAGE = new Set(['confirm', 'recommend', 'generate', 'generate_structured', 'agent_step']);
 
 const GEMINI_MODEL_ID_ENV = String(process.env.GEMINI_MODEL_ID || '').trim();
+/** Model id is embedded in a URL path — allow only safe characters. */
+const GEMINI_MODEL_ID_SAFE = /^[a-zA-Z0-9._-]+$/;
 function getGeminiModelId() {
-  if (GEMINI_MODEL_ID_ENV) return GEMINI_MODEL_ID_ENV;
+  if (GEMINI_MODEL_ID_ENV && GEMINI_MODEL_ID_SAFE.test(GEMINI_MODEL_ID_ENV)) return GEMINI_MODEL_ID_ENV;
+  if (GEMINI_MODEL_ID_ENV && !GEMINI_MODEL_ID_SAFE.test(GEMINI_MODEL_ID_ENV)) {
+    console.warn('[reachai-api] GEMINI_MODEL_ID ignored (use letters, digits, . _ - only). Falling back to gemini-2.5-flash.');
+  }
   return 'gemini-2.5-flash';
 }
 
@@ -114,6 +123,60 @@ if (LINKEDIN_CLIENT_ID && !LINKEDIN_CLIENT_SECRET) {
 }
 
 const app = express();
+if (process.env.VERCEL) {
+  app.set('trust proxy', 1);
+}
+
+/** Simple fixed-window rate limiter (per Node instance; helps against casual abuse). */
+function createRateLimiter({ windowMs, max, keyFn }) {
+  const buckets = new Map();
+  return function rateLimitMiddleware(req, res, next) {
+    const key = keyFn(req);
+    const now = Date.now();
+    let bucket = buckets.get(key);
+    if (!bucket || bucket.resetAt <= now) {
+      bucket = { resetAt: now + windowMs, count: 0 };
+      buckets.set(key, bucket);
+    }
+    bucket.count += 1;
+    if (bucket.count > max) {
+      const retry = Math.ceil((bucket.resetAt - now) / 1000) || 1;
+      res.set('Retry-After', String(retry));
+      return res.status(429).json({ error: 'Too many requests. Try again later.' });
+    }
+    return next();
+  };
+}
+
+function rateLimitClientKey(req) {
+  const xf = String(req.headers['x-forwarded-for'] || '')
+    .split(',')[0]
+    .trim();
+  if (xf) return `ip:${xf}`;
+  const ip = req.ip || req.socket?.remoteAddress || 'unknown';
+  return `ip:${ip}`;
+}
+
+const activateRateLimit = createRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: 40,
+  keyFn: rateLimitClientKey
+});
+const handoffExchangeRateLimit = createRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: 60,
+  keyFn: rateLimitClientKey
+});
+const aiCompleteRateLimit = createRateLimiter({
+  windowMs: 60 * 1000,
+  max: 60,
+  keyFn: (req) => {
+    const auth = String(req.headers.authorization || '');
+    if (!auth.startsWith('Bearer ')) return rateLimitClientKey(req);
+    const h = crypto.createHash('sha256').update(auth).digest('hex').slice(0, 32);
+    return `jwt:${h}`;
+  }
+});
 
 /** LinkedIn redirect_uri must match Developer Portal exactly — never send localhost from Vercel by mistake. */
 function getEffectivePublicBase() {
@@ -200,7 +263,6 @@ app.get('/api/v1/diagnose', (_req, res) => {
     gemini: 'google_generative_language',
     has_gemini_key: !!GEMINI_API_KEY,
     gemini_key_looks_like_ai_studio: !!GEMINI_API_KEY && GEMINI_API_KEY.startsWith('AIza'),
-    gemini_key_length: GEMINI_API_KEY ? GEMINI_API_KEY.length : 0,
     activation_codes_configured: RAW_CODES.length,
     extension_secret_configured: EXTENSION_SECRET.length >= 16,
     jwt_secret_ok: JWT_SECRET.length >= 16,
@@ -249,7 +311,7 @@ app.get('/api/v1/oauth/linkedin/extension-flow/start', (req, res) => {
     state = jwt.sign(
       { typ: 'reachai_li_oauth', v: 1, cd: chromeDone, jti: crypto.randomBytes(12).toString('hex') },
       JWT_SECRET,
-      { expiresIn: '10m', algorithm: 'HS256' }
+      { expiresIn: '10m', algorithm: JWT_ALG }
     );
   } catch (e) {
     return res.status(500).type('text').send('Could not create OAuth state (check JWT_SECRET).');
@@ -274,7 +336,7 @@ app.get('/api/v1/oauth/linkedin/extension-flow/callback', async (req, res) => {
   let oauthSt = null;
   if (stateKey && JWT_SECRET.length >= 16) {
     try {
-      oauthSt = jwt.verify(stateKey, JWT_SECRET);
+      oauthSt = jwt.verify(stateKey, JWT_SECRET, JWT_VERIFY_OPTS);
     } catch {
       oauthSt = null;
     }
@@ -343,7 +405,7 @@ app.get('/api/v1/oauth/linkedin/extension-flow/callback', async (req, res) => {
         sc: String(liData.scope || '')
       },
       JWT_SECRET,
-      { expiresIn: '3m', algorithm: 'HS256' }
+      { expiresIn: '3m', algorithm: JWT_ALG }
     );
   } catch (e) {
     return finishErr(
@@ -366,7 +428,7 @@ app.get('/api/v1/oauth/linkedin/extension-flow/complete', (_req, res) => {
 </body></html>`);
 });
 
-app.post('/api/v1/oauth/linkedin/extension-flow/exchange', (req, res) => {
+app.post('/api/v1/oauth/linkedin/extension-flow/exchange', handoffExchangeRateLimit, (req, res) => {
   const handoff = String(req.body?.handoff || '').trim();
   if (!handoff) return res.status(400).json({ error: 'Missing handoff.' });
   if (!JWT_SECRET || JWT_SECRET.length < 16) {
@@ -374,7 +436,7 @@ app.post('/api/v1/oauth/linkedin/extension-flow/exchange', (req, res) => {
   }
   let row;
   try {
-    row = jwt.verify(handoff, JWT_SECRET);
+    row = jwt.verify(handoff, JWT_SECRET, JWT_VERIFY_OPTS);
   } catch {
     return res.status(400).json({ error: 'Invalid or expired handoff. Try Sign in with LinkedIn again.' });
   }
@@ -386,7 +448,8 @@ app.post('/api/v1/oauth/linkedin/extension-flow/exchange', (req, res) => {
     return res.status(400).json({ error: 'LinkedIn token expired. Sign in again.' });
   }
   const reachaiJwt = jwt.sign({ typ: 'reachai_user', iat: Math.floor(Date.now() / 1000) }, JWT_SECRET, {
-    expiresIn: '30d'
+    expiresIn: '30d',
+    algorithm: JWT_ALG
   });
   const liExpiresIn = Math.max(60, Math.floor((liExpiresAt - Date.now()) / 1000));
   return res.json({
@@ -434,7 +497,24 @@ function extensionSecretMatches(provided) {
   }
 }
 
-app.post('/api/v1/auth/activate', (req, res) => {
+function activationCodeMatches(provided) {
+  const p = String(provided || '');
+  if (!p) return false;
+  for (const c of RAW_CODES) {
+    if (c.length !== p.length) continue;
+    try {
+      const a = Buffer.from(c, 'utf8');
+      const b = Buffer.from(p, 'utf8');
+      if (a.length !== b.length) continue;
+      if (crypto.timingSafeEqual(a, b)) return true;
+    } catch {
+      /* ignore */
+    }
+  }
+  return false;
+}
+
+app.post('/api/v1/auth/activate', activateRateLimit, (req, res) => {
   const code = String(req.body?.code || '').trim();
   const extensionSecret = String(req.body?.extensionSecret || '').trim();
   const hasCodes = RAW_CODES.length > 0;
@@ -448,7 +528,7 @@ app.post('/api/v1/auth/activate', (req, res) => {
   }
 
   let authorized = false;
-  if (hasCodes && code && RAW_CODES.includes(code)) authorized = true;
+  if (hasCodes && code && activationCodeMatches(code)) authorized = true;
   if (!authorized && hasExtSecret && extensionSecretMatches(extensionSecret)) authorized = true;
 
   if (!authorized) {
@@ -462,7 +542,8 @@ app.post('/api/v1/auth/activate', (req, res) => {
     });
   }
   const token = jwt.sign({ typ: 'reachai_user', iat: Math.floor(Date.now() / 1000) }, JWT_SECRET, {
-    expiresIn: '30d'
+    expiresIn: '30d',
+    algorithm: JWT_ALG
   });
   return res.json({ access_token: token, token_type: 'Bearer', expires_in: 30 * 24 * 3600 });
 });
@@ -473,7 +554,7 @@ function authMiddleware(req, res, next) {
   if (!m) return res.status(401).json({ error: 'Missing Bearer token.' });
   if (!JWT_SECRET) return res.status(500).json({ error: 'Server misconfigured.' });
   try {
-    req.user = jwt.verify(m[1], JWT_SECRET);
+    req.user = jwt.verify(m[1], JWT_SECRET, JWT_VERIFY_OPTS);
     return next();
   } catch {
     return res.status(401).json({ error: 'Invalid or expired token.' });
@@ -584,7 +665,7 @@ async function callGemini(prompt, usage = 'generate') {
 }
 
 /** Extension sends the final prompt (same strings as your service worker). Server only holds the API key. */
-app.post('/api/v1/ai/complete', authMiddleware, async (req, res) => {
+app.post('/api/v1/ai/complete', authMiddleware, aiCompleteRateLimit, async (req, res) => {
   const usage = AI_USAGE.has(req.body?.usage) ? req.body.usage : 'generate';
   const prompt = String(req.body?.prompt || '');
   if (!prompt || prompt.length > 120000) {
