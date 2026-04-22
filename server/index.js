@@ -20,6 +20,12 @@ function normalizeGeminiApiKey(raw) {
     .replace(/^["']+|["']+$/g, '');
 }
 const GEMINI_API_KEY = normalizeGeminiApiKey(process.env.GEMINI_API_KEY);
+/** `vertex` | `studio` | empty (auto: Vertex if GCP_PROJECT_ID + service account JSON are set). */
+const GEMINI_PROVIDER = String(process.env.GEMINI_PROVIDER || '')
+  .trim()
+  .toLowerCase();
+const GCP_PROJECT_ID = String(process.env.GCP_PROJECT_ID || '').trim();
+const GCP_LOCATION = String(process.env.GCP_LOCATION || 'us-central1').trim();
 const JWT_SECRET = (process.env.JWT_SECRET || '').trim();
 const RAW_CODES = (process.env.REACHAI_ACTIVATION_CODES || '')
   .split(',')
@@ -40,7 +46,6 @@ const LINKEDIN_EXT_FLOW_REDIRECT_URI = (process.env.LINKEDIN_EXT_FLOW_REDIRECT_U
 
 const LINKEDIN_EXT_CALLBACK_PATH = '/api/v1/oauth/linkedin/extension-flow/callback';
 
-const MODEL_ID = process.env.GEMINI_MODEL_ID || 'gemini-2.5-flash';
 const MAX_TOKENS = {
   confirm: 256,
   /** Large KB + profile prompts need headroom; truncation breaks JSON.parse in the extension. */
@@ -54,6 +59,67 @@ const MAX_TOKENS = {
 
 /** Usage values accepted by POST /api/v1/ai/complete */
 const AI_USAGE = new Set(['confirm', 'recommend', 'generate', 'generate_structured', 'agent_step']);
+
+function hasVertexServiceAccountEnv() {
+  const raw = String(process.env.GCP_SERVICE_ACCOUNT_JSON || '').trim();
+  const b64 = String(process.env.GCP_SERVICE_ACCOUNT_JSON_B64 || '').trim();
+  return !!(raw || b64);
+}
+
+function parseVertexServiceAccount() {
+  const b64 = String(process.env.GCP_SERVICE_ACCOUNT_JSON_B64 || '').trim();
+  let text = String(process.env.GCP_SERVICE_ACCOUNT_JSON || '')
+    .trim()
+    .replace(/^["']+|["']+$/g, '');
+  if (b64) {
+    try {
+      text = Buffer.from(b64, 'base64').toString('utf8');
+    } catch {
+      return { ok: false, error: 'GCP_SERVICE_ACCOUNT_JSON_B64 is not valid base64' };
+    }
+  }
+  if (!text) return { ok: false, error: 'Set GCP_SERVICE_ACCOUNT_JSON or GCP_SERVICE_ACCOUNT_JSON_B64' };
+  try {
+    const o = JSON.parse(text);
+    if (!o.client_email || !o.private_key) {
+      return { ok: false, error: 'Service account JSON must include client_email and private_key' };
+    }
+    return { ok: true, credentials: o };
+  } catch (e) {
+    return { ok: false, error: `Invalid service account JSON: ${e.message}` };
+  }
+}
+
+function useVertexGemini() {
+  if (GEMINI_PROVIDER === 'studio') return false;
+  if (GEMINI_PROVIDER === 'vertex') return true;
+  return !!(GCP_PROJECT_ID && hasVertexServiceAccountEnv());
+}
+
+const GEMINI_MODEL_ID_ENV = String(process.env.GEMINI_MODEL_ID || '').trim();
+function getGeminiModelId() {
+  if (GEMINI_MODEL_ID_ENV) return GEMINI_MODEL_ID_ENV;
+  return useVertexGemini() ? 'gemini-2.0-flash-001' : 'gemini-2.5-flash';
+}
+
+let cachedVertexAuthClient = null;
+
+async function getVertexAccessToken() {
+  const parsed = parseVertexServiceAccount();
+  if (!parsed.ok) throw new Error(parsed.error);
+  if (!cachedVertexAuthClient) {
+    const { GoogleAuth } = require('google-auth-library');
+    const auth = new GoogleAuth({
+      credentials: parsed.credentials,
+      scopes: ['https://www.googleapis.com/auth/cloud-platform']
+    });
+    cachedVertexAuthClient = await auth.getClient();
+  }
+  const tr = await cachedVertexAuthClient.getAccessToken();
+  const token = tr && typeof tr === 'object' ? tr.token : tr;
+  if (!token) throw new Error('Vertex: failed to obtain access token (check service account JSON and IAM).');
+  return token;
+}
 
 function buildGeminiGenerationConfig(usage) {
   const maxOutputTokens = MAX_TOKENS[usage] ?? MAX_TOKENS.generate;
@@ -87,8 +153,10 @@ function buildGeminiGenerationConfig(usage) {
 if (!JWT_SECRET || JWT_SECRET.length < 16) {
   console.warn('[reachai-api] Set JWT_SECRET (16+ chars) in .env');
 }
-if (!GEMINI_API_KEY) {
-  console.warn('[reachai-api] Set GEMINI_API_KEY in .env for AI routes to work');
+if (!useVertexGemini() && !GEMINI_API_KEY) {
+  console.warn(
+    '[reachai-api] Set GEMINI_API_KEY (Google AI Studio, AIza…) or Vertex: GCP_PROJECT_ID + GCP_SERVICE_ACCOUNT_JSON[_B64]'
+  );
 }
 if (RAW_CODES.length === 0 && EXTENSION_SECRET.length < 16) {
   console.warn(
@@ -98,11 +166,19 @@ if (RAW_CODES.length === 0 && EXTENSION_SECRET.length < 16) {
 if (EXTENSION_SECRET.length > 0 && EXTENSION_SECRET.length < 16) {
   console.warn('[reachai-api] REACHAI_EXTENSION_SECRET should be at least 16 characters.');
 }
-if (GEMINI_API_KEY && !GEMINI_API_KEY.startsWith('AIza')) {
+if (!useVertexGemini() && GEMINI_API_KEY && !GEMINI_API_KEY.startsWith('AIza')) {
   console.warn(
-    '[reachai-api] GEMINI_API_KEY should be a Google AI Studio key (usually starts with "AIza"). ' +
-      'Get one at https://aistudio.google.com/app/apikey — other credential types will fail with this API.'
+    '[reachai-api] GEMINI_API_KEY should be a Google AI Studio key (starts with "AIza"), or use Vertex (GCP_PROJECT_ID + service account JSON). ' +
+      'An "AQ…" string is not a Studio API key — use a service account JSON key from GCP for Vertex.'
   );
+}
+if (GEMINI_PROVIDER === 'vertex' && (!GCP_PROJECT_ID || !hasVertexServiceAccountEnv())) {
+  console.warn(
+    '[reachai-api] GEMINI_PROVIDER=vertex requires GCP_PROJECT_ID and GCP_SERVICE_ACCOUNT_JSON (or _B64)'
+  );
+}
+if (useVertexGemini()) {
+  console.log('[reachai-api] Gemini: Vertex (GCP service account). GEMINI_API_KEY / AIza not required.');
 }
 if (LINKEDIN_CLIENT_ID && !LINKEDIN_CLIENT_SECRET) {
   console.warn('[reachai-api] LINKEDIN_CLIENT_ID set but LINKEDIN_CLIENT_SECRET missing — /oauth/linkedin/token will fail.');
@@ -187,18 +263,24 @@ app.get('/health', (_req, res) => {
 
 /** Quick config check (no secrets returned). */
 app.get('/api/v1/diagnose', (_req, res) => {
+  const vertex = useVertexGemini();
   res.json({
     ok: true,
     port: PORT,
     bind: BIND_HOST,
+    gemini_provider: vertex ? 'vertex' : 'google_ai_studio',
+    gemini_provider_explicit: GEMINI_PROVIDER || 'auto',
     has_gemini_key: !!GEMINI_API_KEY,
     gemini_key_looks_like_ai_studio: !!GEMINI_API_KEY && GEMINI_API_KEY.startsWith('AIza'),
     gemini_key_length: GEMINI_API_KEY ? GEMINI_API_KEY.length : 0,
+    vertex_project_configured: !!GCP_PROJECT_ID,
+    vertex_service_account_configured: hasVertexServiceAccountEnv(),
     activation_codes_configured: RAW_CODES.length,
     extension_secret_configured: EXTENSION_SECRET.length >= 16,
     jwt_secret_ok: JWT_SECRET.length >= 16,
     linkedin_oauth_ready: !!(LINKEDIN_CLIENT_ID && LINKEDIN_CLIENT_SECRET),
-    gemini_model: MODEL_ID,
+    gemini_model: getGeminiModelId(),
+    gcp_location: GCP_LOCATION,
     linkedin_extension_flow_callback_url: getExtensionFlowCallbackUrl(),
     reachai_public_url_configured: !!REACHAI_PUBLIC_URL,
     vercel_url_fallback: !!(process.env.VERCEL && !REACHAI_PUBLIC_URL && process.env.VERCEL_URL)
@@ -524,14 +606,20 @@ app.post('/api/v1/oauth/linkedin/token', authMiddleware, async (req, res) => {
   });
 });
 
-async function callGemini(prompt, usage = 'generate') {
-  if (!GEMINI_API_KEY) {
-    return { ok: false, status: 503, text: 'GEMINI_API_KEY missing in server .env' };
+function parseGeminiErrorResponse(text) {
+  let detail = text.slice(0, 800);
+  try {
+    const j = JSON.parse(text);
+    const msg = j?.error?.message || j?.error?.status || j?.message;
+    if (msg) detail = String(msg);
+  } catch {
+    /* keep raw slice */
   }
-  const generationConfig = buildGeminiGenerationConfig(
-    AI_USAGE.has(usage) ? usage : 'generate'
-  );
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_ID}:generateContent?key=${encodeURIComponent(GEMINI_API_KEY)}`;
+  return detail;
+}
+
+async function callGoogleAiStudioGemini(prompt, generationConfig) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${getGeminiModelId()}:generateContent?key=${encodeURIComponent(GEMINI_API_KEY)}`;
   const response = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -541,19 +629,12 @@ async function callGemini(prompt, usage = 'generate') {
     })
   });
   if (!response.ok) {
-    const text = await response.text();
-    let detail = text.slice(0, 800);
-    try {
-      const j = JSON.parse(text);
-      const msg = j?.error?.message || j?.error?.status || j?.message;
-      if (msg) detail = String(msg);
-    } catch {
-      /* keep raw slice */
-    }
+    const raw = await response.text();
+    const detail = parseGeminiErrorResponse(raw);
     let hint = '';
     if (response.status === 400 || response.status === 403) {
       hint =
-        ' For Generative Language API use an API key from https://aistudio.google.com/app/apikey (typically starts with AIza).';
+        ' For Generative Language API use an API key from https://aistudio.google.com/app/apikey (typically starts with AIza), or configure Vertex (GCP).';
     }
     return { ok: false, status: response.status, text: detail + hint };
   }
@@ -561,6 +642,74 @@ async function callGemini(prompt, usage = 'generate') {
   const out = data?.candidates?.[0]?.content?.parts?.[0]?.text;
   if (!out) return { ok: false, status: 502, text: 'Empty model response' };
   return { ok: true, text: String(out).trim().replace(/^["'](.*)["']$/, '$1') };
+}
+
+async function callVertexGemini(prompt, generationConfig) {
+  if (!GCP_PROJECT_ID) {
+    return { ok: false, status: 503, text: 'Vertex requires GCP_PROJECT_ID in server .env' };
+  }
+  const sa = parseVertexServiceAccount();
+  if (!sa.ok) return { ok: false, status: 503, text: sa.error };
+  let token;
+  try {
+    token = await getVertexAccessToken();
+  } catch (e) {
+    return { ok: false, status: 503, text: `Vertex auth: ${e.message || e}` };
+  }
+  const url = `https://${encodeURIComponent(GCP_LOCATION)}-aiplatform.googleapis.com/v1/projects/${encodeURIComponent(GCP_PROJECT_ID)}/locations/${encodeURIComponent(GCP_LOCATION)}/publishers/google/models/${encodeURIComponent(getGeminiModelId())}:generateContent`;
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig
+    })
+  });
+  if (!response.ok) {
+    const raw = await response.text();
+    const detail = parseGeminiErrorResponse(raw);
+    let hint = '';
+    if (response.status === 404) {
+      hint += ` Check GEMINI_MODEL_ID (Vertex often uses a suffix, e.g. gemini-2.0-flash-001). Region: ${GCP_LOCATION}.`;
+    }
+    if (response.status === 403) {
+      hint += ' Grant the service account Vertex AI User (roles/aiplatform.user).';
+    }
+    return { ok: false, status: response.status, text: detail + hint };
+  }
+  const data = await response.json();
+  const out = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!out) return { ok: false, status: 502, text: 'Empty model response (Vertex)' };
+  return { ok: true, text: String(out).trim().replace(/^["'](.*)["']$/, '$1') };
+}
+
+async function callGemini(prompt, usage = 'generate') {
+  const generationConfig = buildGeminiGenerationConfig(
+    AI_USAGE.has(usage) ? usage : 'generate'
+  );
+  if (useVertexGemini()) {
+    return callVertexGemini(prompt, generationConfig);
+  }
+  if (!GEMINI_API_KEY) {
+    return {
+      ok: false,
+      status: 503,
+      text:
+        'GEMINI_API_KEY missing (Google AI Studio, AIza…), or set Vertex: GCP_PROJECT_ID + GCP_SERVICE_ACCOUNT_JSON (or _B64). An AQ… credential alone is not a Studio API key.'
+    };
+  }
+  if (!GEMINI_API_KEY.startsWith('AIza')) {
+    return {
+      ok: false,
+      status: 503,
+      text:
+        'GEMINI_API_KEY must start with "AIza" for Google AI Studio. If you only have GCP credentials (e.g. AQ…), use Vertex instead: set GCP_PROJECT_ID and paste the full service account JSON in GCP_SERVICE_ACCOUNT_JSON (or GCP_SERVICE_ACCOUNT_JSON_B64). Optional: GEMINI_PROVIDER=vertex.'
+    };
+  }
+  return callGoogleAiStudioGemini(prompt, generationConfig);
 }
 
 /** Extension sends the final prompt (same strings as your service worker). Server only holds the API key. */
@@ -572,7 +721,11 @@ app.post('/api/v1/ai/complete', authMiddleware, async (req, res) => {
   }
   try {
     const r = await callGemini(prompt, usage);
-    if (!r.ok) return res.status(502).json({ error: r.text || 'Gemini error', status: r.status });
+    if (!r.ok) {
+      const http =
+        r.status === 503 || r.status === 401 || r.status === 400 ? r.status : r.status === 429 ? 429 : 502;
+      return res.status(http).json({ error: r.text || 'Gemini error', geminiStatus: r.status });
+    }
     return res.json({ text: r.text });
   } catch (e) {
     return res.status(500).json({ error: e.message || 'Server error' });
@@ -582,6 +735,9 @@ app.post('/api/v1/ai/complete', authMiddleware, async (req, res) => {
 if (require.main === module) {
   app.listen(PORT, BIND_HOST, () => {
     console.log(`[reachai-api] Listening on http://${BIND_HOST}:${PORT}`);
+    if (!useVertexGemini()) {
+      console.log('[reachai-api] Gemini: Google AI Studio (GEMINI_API_KEY=AIza…), or add GCP_PROJECT_ID + service account JSON for Vertex.');
+    }
     console.log('[reachai-api] POST /api/v1/auth/activate  body: { "code": "..." }');
     console.log('[reachai-api] POST /api/v1/ai/complete   Authorization: Bearer <jwt>');
     console.log('[reachai-api] POST /api/v1/oauth/linkedin/token  Authorization: Bearer <jwt>  body: { code, redirect_uri }');
