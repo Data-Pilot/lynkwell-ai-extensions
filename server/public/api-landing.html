@@ -3,192 +3,178 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#0c1222" />
-  <meta name="description" content="LynkWell AI API — secure Gemini proxy and extension auth." />
+  <meta name="theme-color" content="#ee765e" />
+  <meta name="description" content="LynkWell AI API — same brand colors as the Chrome extension: secure Gemini proxy and extension auth." />
   <title>LynkWell AI · API</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
+    /* Aligned with extension/sidepanel.css — LynkWell AI brand */
     :root {
-      --bg0: #070b12;
-      --bg1: #0c1222;
-      --card: rgba(255, 255, 255, 0.04);
-      --card-border: rgba(255, 255, 255, 0.08);
-      --text: #f1f5f9;
-      --muted: #94a3b8;
-      --faint: #64748b;
-      --accent: #38bdf8;
-      --accent-dim: rgba(56, 189, 248, 0.15);
-      --glow: rgba(56, 189, 248, 0.35);
+      --lw-bg: #ffffff;
+      --lw-text: #0f172a;
+      --lw-muted: #64748b;
+      --lw-faint: #94a3b8;
+      --lw-border: #e2e8f0;
+      --lw-coral: #ee765e;
+      --lw-coral-hover: #e06452;
+      --lw-coral-soft: #fff4f2;
+      --lw-radius: 14px;
+      --lw-radius-sm: 12px;
     }
     * { box-sizing: border-box; }
-    html, body { height: 100%; }
     body {
       margin: 0;
-      font-family: "Instrument Sans", system-ui, sans-serif;
-      background: var(--bg0);
-      color: var(--text);
       min-height: 100vh;
-      overflow-x: hidden;
+      font-family: Inter, system-ui, -apple-system, sans-serif;
+      background: var(--lw-bg);
+      color: var(--lw-text);
+      -webkit-font-smoothing: antialiased;
     }
-    .bg {
-      position: fixed;
-      inset: 0;
-      background:
-        radial-gradient(ellipse 120% 80% at 50% -20%, rgba(56, 189, 248, 0.12), transparent 55%),
-        radial-gradient(ellipse 80% 50% at 100% 50%, rgba(99, 102, 241, 0.08), transparent 50%),
-        radial-gradient(ellipse 60% 40% at 0% 80%, rgba(14, 165, 233, 0.06), transparent 45%),
-        linear-gradient(180deg, var(--bg1) 0%, var(--bg0) 100%);
-      z-index: 0;
-    }
-    .grid-noise {
-      position: fixed;
-      inset: 0;
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
-      pointer-events: none;
-      z-index: 1;
-    }
-    .wrap {
-      position: relative;
-      z-index: 2;
+    .shell {
       max-width: 52rem;
       margin: 0 auto;
-      padding: clamp(2rem, 5vw, 4rem) clamp(1.25rem, 4vw, 2rem) 4rem;
+      padding: clamp(1.5rem, 4vw, 2.5rem) clamp(1.25rem, 4vw, 2rem) 3rem;
     }
     header {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 1rem;
-      margin-bottom: clamp(2.5rem, 8vw, 4.5rem);
       flex-wrap: wrap;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid var(--lw-border);
+      margin-bottom: clamp(1.75rem, 5vw, 2.75rem);
     }
-    .logo {
+    .brand {
       display: flex;
       align-items: center;
-      gap: 0.75rem;
+      gap: 10px;
     }
-    .logo-mark {
-      width: 2.5rem;
-      height: 2.5rem;
-      border-radius: 0.65rem;
-      background: linear-gradient(135deg, var(--accent), #818cf8);
+    .brand__mark {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      background: var(--lw-coral);
+      color: #fff;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 0 24px var(--glow);
+      flex-shrink: 0;
     }
-    .logo-mark svg { width: 1.35rem; height: 1.35rem; color: #0c1222; }
-    .logo-text {
+    .brand__mark svg { width: 18px; height: 18px; }
+    .brand__name {
       font-weight: 700;
       font-size: 1.125rem;
       letter-spacing: -0.02em;
     }
-    .logo-text span { color: var(--muted); font-weight: 500; font-size: 0.875rem; }
+    .brand__name span {
+      font-weight: 500;
+      color: var(--lw-muted);
+      font-size: 0.875rem;
+    }
     .pill {
-      font-size: 0.75rem;
+      font-size: 0.6875rem;
       font-weight: 600;
       text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--accent);
-      background: var(--accent-dim);
-      border: 1px solid rgba(56, 189, 248, 0.25);
+      letter-spacing: 0.06em;
+      color: var(--lw-coral);
+      background: var(--lw-coral-soft);
+      border: 1px solid rgba(238, 118, 94, 0.25);
       padding: 0.35rem 0.75rem;
       border-radius: 9999px;
     }
     h1 {
       margin: 0;
-      font-size: clamp(2rem, 5vw, 2.75rem);
+      font-size: clamp(1.65rem, 4vw, 2.25rem);
       font-weight: 700;
       letter-spacing: -0.03em;
-      line-height: 1.15;
-      max-width: 20ch;
+      line-height: 1.2;
+      max-width: 22ch;
     }
     .lead {
-      margin: 1rem 0 0;
-      font-size: 1.0625rem;
-      color: var(--muted);
+      margin: 0.85rem 0 0;
+      font-size: 1rem;
+      color: var(--lw-muted);
       line-height: 1.65;
-      max-width: 42rem;
+      max-width: 40rem;
     }
     .actions {
       display: flex;
       flex-wrap: wrap;
-      gap: 0.75rem;
-      margin-top: 1.75rem;
+      gap: 0.65rem;
+      margin-top: 1.5rem;
     }
     .btn {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 0.5rem;
-      padding: 0.65rem 1.15rem;
-      font-size: 0.9375rem;
+      gap: 0.45rem;
+      padding: 0.6rem 1.1rem;
+      font-size: 0.875rem;
       font-weight: 600;
       font-family: inherit;
-      border-radius: 0.5rem;
+      border-radius: var(--lw-radius-sm);
       text-decoration: none;
       border: none;
       cursor: pointer;
-      transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+      transition: background 0.15s ease, box-shadow 0.15s ease;
     }
-    .btn:active { transform: scale(0.98); }
     .btn-primary {
-      background: linear-gradient(135deg, #0ea5e9, var(--accent));
-      color: #0c1222;
-      box-shadow: 0 4px 24px rgba(56, 189, 248, 0.35);
+      background: var(--lw-coral);
+      color: #fff;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
     }
-    .btn-primary:hover { box-shadow: 0 6px 32px rgba(56, 189, 248, 0.45); }
+    .btn-primary:hover { background: var(--lw-coral-hover); }
     .btn-ghost {
-      background: var(--card);
-      color: var(--text);
-      border: 1px solid var(--card-border);
+      background: var(--lw-bg);
+      color: var(--lw-text);
+      border: 1px solid var(--lw-border);
     }
-    .btn-ghost:hover { background: rgba(255, 255, 255, 0.07); }
+    .btn-ghost:hover { background: #f8fafc; }
     .cards {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
       gap: 1rem;
-      margin-top: clamp(2.5rem, 6vw, 3.5rem);
+      margin-top: clamp(2rem, 5vw, 2.75rem);
     }
     .card {
-      background: var(--card);
-      border: 1px solid var(--card-border);
-      border-radius: 0.75rem;
-      padding: 1.25rem 1.35rem;
-      backdrop-filter: blur(8px);
+      background: var(--lw-bg);
+      border: 1px solid var(--lw-border);
+      border-radius: var(--lw-radius);
+      padding: 1.15rem 1.25rem;
     }
     .card h2 {
-      margin: 0 0 0.5rem;
-      font-size: 0.9375rem;
+      margin: 0 0 0.45rem;
+      font-size: 0.875rem;
       font-weight: 600;
-      color: var(--text);
+      color: var(--lw-text);
     }
     .card p {
       margin: 0;
       font-size: 0.8125rem;
-      color: var(--faint);
+      color: var(--lw-muted);
       line-height: 1.55;
     }
     .card-icon {
       width: 2rem;
       height: 2rem;
-      border-radius: 0.5rem;
-      background: var(--accent-dim);
-      color: var(--accent);
+      border-radius: 8px;
+      background: var(--lw-coral-soft);
+      color: var(--lw-coral);
       display: flex;
       align-items: center;
       justify-content: center;
-      margin-bottom: 0.85rem;
+      margin-bottom: 0.75rem;
     }
-    .card-icon svg { width: 1.1rem; height: 1.1rem; }
+    .card-icon svg { width: 1.05rem; height: 1.05rem; }
     footer {
-      margin-top: clamp(3rem, 8vw, 4rem);
-      padding-top: 1.5rem;
-      border-top: 1px solid var(--card-border);
+      margin-top: clamp(2.25rem, 6vw, 3rem);
+      padding-top: 1.25rem;
+      border-top: 1px solid var(--lw-border);
       font-size: 0.8125rem;
-      color: var(--faint);
+      color: var(--lw-faint);
       display: flex;
       flex-wrap: wrap;
       align-items: center;
@@ -196,33 +182,33 @@
       gap: 1rem;
     }
     footer a {
-      color: var(--muted);
+      color: var(--lw-coral);
+      font-weight: 600;
       text-decoration: none;
     }
-    footer a:hover { color: var(--accent); }
-    code.endpoint {
-      font-size: 0.75rem;
-      color: var(--muted);
-      background: rgba(0, 0, 0, 0.35);
-      padding: 0.2rem 0.45rem;
-      border-radius: 0.35rem;
-      border: 1px solid var(--card-border);
+    footer a:hover { text-decoration: underline; }
+    code.ep {
+      font-family: ui-monospace, monospace;
+      font-size: 0.7rem;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: #f3f4f6;
+      border: 1px solid var(--lw-border);
+      color: var(--lw-text);
     }
   </style>
 </head>
 <body>
-  <div class="bg" aria-hidden="true"></div>
-  <div class="grid-noise" aria-hidden="true"></div>
-  <div class="wrap">
+  <div class="shell">
     <header>
-      <div class="logo">
-        <div class="logo-mark" aria-hidden="true">
+      <div class="brand">
+        <span class="brand__mark" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 2L2 7l10 5 10-5-10-5z" />
             <path d="M2 17l10 5 10-5M2 12l10 5 10-5" />
           </svg>
-        </div>
-        <div class="logo-text">LynkWell AI <span>· API</span></div>
+        </span>
+        <div class="brand__name">LynkWell AI <span>· API</span></div>
       </div>
       <span class="pill">Live</span>
     </header>
@@ -230,12 +216,13 @@
     <main>
       <h1>Your outreach stack, backed securely.</h1>
       <p class="lead">
-        This is the LynkWell AI cloud API: Google Gemini runs here (your key never ships in the extension),
-        sessions use signed JWTs, and LinkedIn OAuth can complete against this host when configured.
+        Same look as the LynkWell Chrome extension: white shell, coral accents, navy type.
+        Gemini runs here with your server key; the extension uses short-lived JWTs after activation.
       </p>
       <div class="actions">
         <a class="btn btn-primary" href="/health">Check health</a>
         <a class="btn btn-ghost" href="/api/v1/diagnose">Run diagnose</a>
+        <a class="btn btn-ghost" href="/security">Security overview</a>
       </div>
 
       <div class="cards">
@@ -244,28 +231,28 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
           </div>
           <h2>Gemini on the server</h2>
-          <p>Prompts from the Chrome extension are completed with your hosted key — not exposed client-side.</p>
+          <p>API keys stay in environment variables on the host, not in the extension bundle.</p>
         </div>
         <div class="card">
           <div class="card-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
           </div>
-          <h2>JWT activation</h2>
-          <p>Invite codes or extension secrets mint short-lived bearer tokens for <code class="endpoint">/api/v1/ai/complete</code>.</p>
+          <h2>Signed sessions</h2>
+          <p>JWTs use HS256 with explicit algorithm verification; sensitive routes are rate-limited.</p>
         </div>
         <div class="card">
           <div class="card-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           </div>
           <h2>LinkedIn-ready</h2>
-          <p>OAuth callback routes for extension sign-in when <code class="endpoint">REACHAI_PUBLIC_URL</code> matches this origin.</p>
+          <p>OAuth callbacks when your public URL and LinkedIn app redirect settings match this host.</p>
         </div>
       </div>
     </main>
 
     <footer>
       <span>LynkWell AI · multi-channel outreach</span>
-      <span><code class="endpoint">POST /api/v1/auth/activate</code> · <code class="endpoint">POST /api/v1/ai/complete</code></span>
+      <span><code class="ep">POST /api/v1/auth/activate</code> · <code class="ep">POST /api/v1/ai/complete</code></span>
     </footer>
   </div>
 </body>

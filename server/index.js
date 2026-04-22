@@ -248,9 +248,36 @@ app.use(
     allowedHeaders: ['Content-Type', 'Authorization']
   })
 );
+
+/** OWASP-style baseline headers (TLS/HSTS depend on your reverse host, e.g. Vercel HTTPS). */
+function securityHeadersMiddleware(_req, res, next) {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=()');
+  if (process.env.VERCEL || String(process.env.NODE_ENV).toLowerCase() === 'production') {
+    res.setHeader('Strict-Transport-Security', 'max-age=15552000; includeSubDomains');
+  }
+  const csp = [
+    "default-src 'self'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+    "script-src 'none'",
+    "img-src 'self' data:",
+    "style-src 'self' https://fonts.googleapis.com 'unsafe-inline'",
+    "font-src https://fonts.gstatic.com",
+    "connect-src 'self'"
+  ].join('; ');
+  res.setHeader('Content-Security-Policy', csp);
+  return next();
+}
+app.use(securityHeadersMiddleware);
+
 app.use(express.json({ limit: '2mb' }));
 
 const API_LANDING_HTML = path.join(__dirname, 'public', 'api-landing.html');
+const SECURITY_HTML_PATH = path.join(__dirname, 'public', 'security.html');
 
 app.get('/', (_req, res) => {
   try {
@@ -262,6 +289,16 @@ app.get('/', (_req, res) => {
       .send(
         '<!DOCTYPE html><html><head><meta charset="utf-8"><title>LynkWell AI API</title></head><body style="font-family:system-ui;margin:2rem"><h1>LynkWell AI API</h1><p><a href="/health">/health</a> · <a href="/api/v1/diagnose">/api/v1/diagnose</a></p></body></html>'
       );
+  }
+});
+
+app.get('/security', (_req, res) => {
+  try {
+    res.setHeader('Cache-Control', 'no-store');
+    const html = fs.readFileSync(SECURITY_HTML_PATH, 'utf8');
+    return res.type('html').send(html);
+  } catch {
+    return res.status(404).type('text').send('Not found');
   }
 });
 

@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex" />
+  <meta name="theme-color" content="#ee765e" />
+  <title>Security overview · LynkWell AI API</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --lw-bg: #ffffff;
+      --lw-text: #0f172a;
+      --lw-muted: #64748b;
+      --lw-faint: #94a3b8;
+      --lw-border: #e2e8f0;
+      --lw-coral: #ee765e;
+      --lw-coral-hover: #e06452;
+      --lw-coral-soft: #fff4f2;
+      --lw-radius: 14px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, sans-serif;
+      background: var(--lw-bg);
+      color: var(--lw-text);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+    .wrap {
+      max-width: 42rem;
+      margin: 0 auto;
+      padding: clamp(1.5rem, 4vw, 2.5rem) clamp(1.25rem, 4vw, 2rem) 3rem;
+    }
+    a { color: var(--lw-coral); font-weight: 600; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    h1 {
+      margin: 0 0 0.35rem;
+      font-size: 1.65rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .sub { color: var(--lw-muted); font-size: 0.9375rem; margin-bottom: 2rem; }
+    h2 {
+      margin: 1.75rem 0 0.65rem;
+      font-size: 1rem;
+      font-weight: 600;
+    }
+    ul { margin: 0 0 1rem; padding-left: 1.2rem; color: var(--lw-muted); font-size: 0.9375rem; }
+    li { margin: 0.35rem 0; }
+    .callout {
+      background: var(--lw-coral-soft);
+      border: 1px solid rgba(238, 118, 94, 0.25);
+      border-radius: var(--lw-radius);
+      padding: 1rem 1.15rem;
+      margin-top: 1.5rem;
+      font-size: 0.875rem;
+      color: var(--lw-text);
+    }
+    .callout strong { display: block; margin-bottom: 0.35rem; color: var(--lw-text); }
+    p { color: var(--lw-muted); font-size: 0.9375rem; margin: 0 0 1rem; }
+    .back { font-size: 0.875rem; margin-bottom: 1.25rem; display: inline-block; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <a class="back" href="/">← Back to API home</a>
+    <h1>Security overview</h1>
+    <p class="sub">LynkWell AI API — technical controls and honest compliance language.</p>
+
+    <h2>What we implement in software</h2>
+    <ul>
+      <li><strong>Transport:</strong> Deploy behind HTTPS (e.g. Vercel) so traffic is encrypted in transit; optional HSTS in production.</li>
+      <li><strong>Secrets:</strong> Gemini and LinkedIn credentials live in server environment variables, not in extension source.</li>
+      <li><strong>Auth:</strong> Session tokens are signed JWTs (HS256) with explicit algorithm checks; protected routes require a valid Bearer token.</li>
+      <li><strong>Activation:</strong> Invite codes and extension secrets compared with timing-safe checks where applicable; brute-force mitigation via rate limits on activation and handoff exchange.</li>
+      <li><strong>HTTP headers:</strong> Baseline headers such as <code>X-Content-Type-Options: nosniff</code>, <code>X-Frame-Options: DENY</code>, <code>Referrer-Policy</code>, <code>Permissions-Policy</code>, Content-Security-Policy on served HTML, and strict framing rules.</li>
+      <li><strong>Input limits:</strong> JSON body size cap and prompt length limits on AI routes.</li>
+      <li><strong>OAuth:</strong> LinkedIn extension-flow uses signed state and short-lived handoff payloads validated server-side.</li>
+    </ul>
+
+    <h2>SOC 2, ISO 27001, and similar frameworks</h2>
+    <p>
+      <strong>SOC 2 Type II</strong> and <strong>ISO 27001</strong> certifications mean an <em>independent auditor</em> has reviewed <em>your</em> organization’s policies, controls, and evidence over a defined period (SOC 2) or your information security management system (ISO 27001).
+      Shipping this API does not, by itself, grant those certifications.
+    </p>
+    <div class="callout">
+      <strong>How this maps to “readiness” language</strong>
+      Many teams describe an app as implementing controls that <em>commonly appear</em> in SOC 2 / ISO readiness work—encryption in transit, access control, secret handling, logging discipline—then pursue formal audit with their compliance vendor. Use accurate wording in customer contracts: e.g. “designed with security controls aligned to industry practice” unless you hold an active attestation for <em>this</em> service.
+    </div>
+
+    <h2>Your responsibilities when you go live</h2>
+    <ul>
+      <li>Rotate <code>JWT_SECRET</code> and activation material if exposed; use strong random values in production.</li>
+      <li>Restrict LinkedIn redirect URLs to the exact production callback(s).</li>
+      <li>Review Vercel (or host) access, audit logs, and who can change environment variables.</li>
+      <li>For enterprise customers, complete your own SOC 2 / ISO program with a licensed assessor if they require attestation.</li>
+    </ul>
+
+    <p style="margin-top:2rem;font-size:0.8125rem;color:var(--lw-faint);">
+      API JSON routes share the same security header middleware as these pages. This document is informational only and not a legal agreement.
+    </p>
+  </div>
+</body>
+</html>

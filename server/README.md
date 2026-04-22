@@ -60,7 +60,7 @@ Alternative: `chmod +x run.sh && ./run.sh`
 
 ### 4. Verify
 
-- **Branded home:** open the server root (e.g. [http://127.0.0.1:3847/](http://127.0.0.1:3847/)) — HTML landing page with LynkWell AI styling; on Vercel, your deployment URL shows the same page.
+- **Branded home:** open the server root (e.g. [http://127.0.0.1:3847/](http://127.0.0.1:3847/)) — HTML landing page using the **same coral / navy palette as the Chrome extension** (`extension/sidepanel.css`). **[`/security`](http://127.0.0.1:3847/security)** — security overview and honest compliance wording (not a substitute for SOC 2 / ISO audit). Responses include baseline **security headers** (CSP on HTML, `X-Frame-Options`, etc.).
 - **Health:** [http://127.0.0.1:3847/health](http://127.0.0.1:3847/health) — expect `{"ok":true,"service":"reachai-api"}` (use your host/port if you changed them).
 - **Diagnose (no auth):** [http://127.0.0.1:3847/api/v1/diagnose](http://127.0.0.1:3847/api/v1/diagnose) — non-secret flags only (e.g. whether Gemini env is set, JWT length OK).
 
