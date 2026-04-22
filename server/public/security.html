@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex" />
   <meta name="theme-color" content="#ee765e" />
-  <title>Security overview · LynkWell AI API</title>
+  <title>Security overview · Linkwell Connect API</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -34,6 +34,14 @@
       max-width: 42rem;
       margin: 0 auto;
       padding: clamp(1.5rem, 4vw, 2.5rem) clamp(1.25rem, 4vw, 2rem) 3rem;
+    }
+    .logo-row img {
+      height: 44px;
+      width: auto;
+      max-width: min(100%, 260px);
+      object-fit: contain;
+      display: block;
+      margin-bottom: 1.25rem;
     }
     a { color: var(--lw-coral); font-weight: 600; text-decoration: none; }
     a:hover { text-decoration: underline; }
@@ -68,8 +76,17 @@
 <body>
   <div class="wrap">
     <a class="back" href="/">← Back to API home</a>
+    <div class="logo-row">
+      <img
+        src="/linkwell-connect-logo.png"
+        alt="Linkwell Connect — Multi-channel outreach suite"
+        width="260"
+        height="72"
+        decoding="async"
+      />
+    </div>
     <h1>Security overview</h1>
-    <p class="sub">LynkWell AI API — technical controls and honest compliance language.</p>
+    <p class="sub">Linkwell Connect API — technical controls and honest compliance language.</p>
 
     <h2>What we implement in software</h2>
     <ul>
@@ -79,7 +96,7 @@
       <li><strong>Activation:</strong> Invite codes and extension secrets compared with timing-safe checks where applicable; brute-force mitigation via rate limits on activation and handoff exchange.</li>
       <li><strong>HTTP headers:</strong> Baseline headers such as <code>X-Content-Type-Options: nosniff</code>, <code>X-Frame-Options: DENY</code>, <code>Referrer-Policy</code>, <code>Permissions-Policy</code>, Content-Security-Policy on served HTML, and strict framing rules.</li>
       <li><strong>Input limits:</strong> JSON body size cap and prompt length limits on AI routes.</li>
-      <li><strong>OAuth:</strong> LinkedIn extension-flow uses signed state and short-lived handoff payloads validated server-side.</li>
+      <li><strong>OAuth:</strong> LinkedIn extension-flow uses signed state and short-lived handoff payloads validated server-side (LynkWell AI extension).</li>
     </ul>
 
     <h2>SOC 2, ISO 27001, and similar frameworks</h2>

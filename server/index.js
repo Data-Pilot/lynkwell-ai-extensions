@@ -302,6 +302,15 @@ app.get('/security', (_req, res) => {
   }
 });
 
+app.use(
+  express.static(path.join(__dirname, 'public'), {
+    index: false,
+    setHeaders(res, filePath) {
+      if (String(filePath).endsWith('.png')) res.setHeader('Cache-Control', 'public, max-age=86400');
+    }
+  })
+);
+
 app.get('/health', (_req, res) => {
   res.json({ ok: true, service: 'reachai-api' });
 });

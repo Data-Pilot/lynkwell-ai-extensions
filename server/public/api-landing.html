@@ -4,8 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#ee765e" />
-  <meta name="description" content="LynkWell AI API — same brand colors as the Chrome extension: secure Gemini proxy and extension auth." />
-  <title>LynkWell AI · API</title>
+  <meta name="description" content="Linkwell Connect API — hosted backend for the multi-channel outreach suite." />
+  <title>Linkwell Connect · API</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -50,29 +50,27 @@
     .brand {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 12px;
+      flex-wrap: wrap;
+      min-width: 0;
     }
-    .brand__mark {
-      width: 34px;
-      height: 34px;
-      border-radius: 8px;
-      background: var(--lw-coral);
-      color: #fff;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
+    .brand__logo {
+      height: clamp(42px, 9vw, 56px);
+      width: auto;
+      max-width: min(100%, 300px);
+      object-fit: contain;
+      display: block;
     }
-    .brand__mark svg { width: 18px; height: 18px; }
-    .brand__name {
+    .brand__api {
+      font-size: 0.6875rem;
       font-weight: 700;
-      font-size: 1.125rem;
-      letter-spacing: -0.02em;
-    }
-    .brand__name span {
-      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
       color: var(--lw-muted);
-      font-size: 0.875rem;
+      padding: 0.35rem 0.5rem;
+      border: 1px solid var(--lw-border);
+      border-radius: 8px;
+      flex-shrink: 0;
     }
     .pill {
       font-size: 0.6875rem;
@@ -202,13 +200,15 @@
   <div class="shell">
     <header>
       <div class="brand">
-        <span class="brand__mark" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 2L2 7l10 5 10-5-10-5z" />
-            <path d="M2 17l10 5 10-5M2 12l10 5 10-5" />
-          </svg>
-        </span>
-        <div class="brand__name">LynkWell AI <span>· API</span></div>
+        <img
+          class="brand__logo"
+          src="/linkwell-connect-logo.png"
+          alt="Linkwell Connect — Multi-channel outreach suite"
+          width="300"
+          height="90"
+          decoding="async"
+        />
+        <span class="brand__api">API</span>
       </div>
       <span class="pill">Live</span>
     </header>
@@ -216,8 +216,7 @@
     <main>
       <h1>Your outreach stack, backed securely.</h1>
       <p class="lead">
-        Same look as the LynkWell Chrome extension: white shell, coral accents, navy type.
-        Gemini runs here with your server key; the extension uses short-lived JWTs after activation.
+        Official Linkwell Connect branding. Gemini runs on this host with your server key; the Chrome extension uses short-lived JWTs after activation.
       </p>
       <div class="actions">
         <a class="btn btn-primary" href="/health">Check health</a>
@@ -251,7 +250,7 @@
     </main>
 
     <footer>
-      <span>LynkWell AI · multi-channel outreach</span>
+      <span>Linkwell Connect · multi-channel outreach suite</span>
       <span><code class="ep">POST /api/v1/auth/activate</code> · <code class="ep">POST /api/v1/ai/complete</code></span>
     </footer>
   </div>
