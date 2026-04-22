@@ -9,7 +9,7 @@
 
 // ╔══════════════════════════════════════════════════════════════════════════╗
 // ║  ONE PLACE — your API base URLs (no trailing slash)                      ║
-// ║  Default: hosted LynkWell AI API for team zips. For local Docker API, use  ║
+// ║  Default: Vercel API (no trailing slash). For local API use               ║
 // ║  http://127.0.0.1:3847 and add that origin to extension/manifest.json.   ║
 // ╚══════════════════════════════════════════════════════════════════════════╝
 var REACHAI_MY_API_BASE_URL = 'https://lynkwell-ai-extensions.vercel.app';

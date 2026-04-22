@@ -1,6 +1,6 @@
 # Production launch checklist (LynkWell AI)
 
-Use this in order. Your API is already referenced in the repo as **`https://lynkwell-ai-extensions.vercel.app`** in `extension/lib/reach-api-default.js` and `extension/manifest.json` — adjust every hostname below if yours differs.
+Use this in order. The extension defaults to the **Vercel** deployment **`https://lynkwell-ai-extensions.vercel.app`** (`extension/lib/reach-api-default.js`, `extension/manifest.json`). For “prod for now” on that host, set **Vercel env** `REACHAI_PUBLIC_URL` to **that same HTTPS origin** (no path) so LinkedIn callbacks match. If you later use a custom domain, update the extension URL, `host_permissions`, and `REACHAI_PUBLIC_URL` together.
 
 ---
 
