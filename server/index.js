@@ -173,8 +173,8 @@ if (EXTENSION_SECRET.length > 0 && EXTENSION_SECRET.length < 16) {
 }
 if (!useVertexGemini() && GEMINI_API_KEY && !GEMINI_API_KEY.startsWith('AIza')) {
   console.warn(
-    '[reachai-api] GEMINI_API_KEY should be a Google AI Studio key (starts with "AIza"), or use Vertex (GCP_PROJECT_ID + service account JSON). ' +
-      'An "AQ…" string is not a Studio API key — use a service account JSON key from GCP for Vertex.'
+    '[reachai-api] GEMINI_API_KEY is set but does not start with "AIza" (typical for https://aistudio.google.com/app/apikey ). ' +
+      'The server still calls Google AI Studio; if you get 401/403, switch to an AI Studio key or use Vertex (GEMINI_PROVIDER=vertex + GCP service account JSON).'
   );
 }
 const _wantVertexFlag = String(process.env.GEMINI_USE_VERTEX || '')
